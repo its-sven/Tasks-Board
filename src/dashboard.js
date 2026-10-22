@@ -28,7 +28,7 @@ import store from './store/store.js'
 import { createApp } from 'vue'
 
 document.addEventListener('DOMContentLoaded', () => {
-	OCA.Dashboard.register('tasks', (el) => {
+	OCA.Dashboard.register(appName, (el) => {
 		const item = createApp(Dashboard)
 			.use(store)
 			.mount(el)

@@ -26,7 +26,7 @@
 #    npm run test
 #
 
-app_name=$(notdir $(CURDIR))
+app_name=tasks_board
 build_directory=$(CURDIR)/build
 appstore_build_directory=$(CURDIR)/build/appstore/$(app_name)
 appstore_artifact_directory=$(CURDIR)/build/artifacts/appstore

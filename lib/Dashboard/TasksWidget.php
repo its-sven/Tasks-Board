@@ -23,9 +23,9 @@ declare(strict_types=1);
  *
  */
 
-namespace OCA\Tasks\Dashboard;
+namespace OCA\TasksBoard\Dashboard;
 
-use OCA\Tasks\AppInfo\Application;
+use OCA\TasksBoard\AppInfo\Application;
 use OCP\Dashboard\IWidget;
 use OCP\IL10N;
 
@@ -54,7 +54,7 @@ class TasksWidget implements IWidget {
 	 * @inheritDoc
 	 */
 	public function getTitle(): string {
-		return $this->l10n->t('Upcoming tasks');
+		return $this->l10n->t('Upcoming tasks') . ' (Tasks Board)';
 	}
 
 	/**
@@ -82,8 +82,8 @@ class TasksWidget implements IWidget {
 	 * @inheritDoc
 	 */
 	public function load(): void {
-		\OCP\Util::addScript('tasks', 'tasks-dashboard');
-		\OCP\Util::addStyle('tasks', 'tasks-dashboard');
-		\OCP\Util::addStyle('tasks', 'tasks-icon');
+		\OCP\Util::addScript(Application::APP_ID, Application::APP_ID . '-dashboard');
+		\OCP\Util::addStyle(Application::APP_ID, Application::APP_ID . '-dashboard');
+		\OCP\Util::addStyle(Application::APP_ID, 'tasks-icon');
 	}
 }

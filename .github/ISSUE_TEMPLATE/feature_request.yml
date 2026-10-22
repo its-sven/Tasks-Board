@@ -5,12 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        ### 👍 Thanks for reporting issues back to Nextcloud!
-        This is the issue tracker of Nextcloud, if you have any support question please check out [support](https://nextcloud.com/support)
-        To make it possible for us to help you please fill out below information carefully.
-        
-        If you have any questions, head over to the [forums](https://help.nextcloud.com/c/apps/tasks).
-        Note that Nextcloud is an open source project backed by Nextcloud GmbH. Most of our volunteers are home users and thus primarily care about issues that affect home users. Our paid engineers prioritize issues of our customers. If you are neither a home user nor a customer, consider paying somebody to implement the feature or enhancement you'd like, do it yourself or [become a customer](https://nextcloud.com/enterprise/).
+        ### 👍 Thanks for your idea for Tasks Board!
+        Please describe the problem you want to solve and the solution you would like.
   - type: textarea
     id: description-problem
     attributes:

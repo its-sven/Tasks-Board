@@ -20,10 +20,10 @@
  *
  */
 
-namespace OCA\Tasks\Tests\Unit\Controller;
+namespace OCA\TasksBoard\Tests\Unit\Controller;
 
-use OCA\Tasks\Controller\SettingsController;
-use OCA\Tasks\Service\SettingsService;
+use OCA\TasksBoard\Controller\SettingsController;
+use OCA\TasksBoard\Service\SettingsService;
 use OCP\IRequest;
 
 use PHPUnit\Framework\TestCase;
@@ -34,7 +34,7 @@ class SettingsControllerTest extends TestCase {
 	private $request;
 	private $controller;
 
-	use \OCA\Tasks\Controller\Response;
+	use \OCA\TasksBoard\Controller\Response;
 
 	/**
 	 * Gets run before each test

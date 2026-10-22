@@ -20,9 +20,9 @@
  *
  */
 
-namespace OCA\Tasks\Tests\Unit\Service;
+namespace OCA\TasksBoard\Tests\Unit\Service;
 
-use OCA\Tasks\Service\CollectionsService;
+use OCA\TasksBoard\Service\CollectionsService;
 use OCP\IConfig;
 use OCP\IL10N;
 
@@ -39,7 +39,7 @@ class CollectionsServiceTest extends TestCase {
 	 * Gets run before each test
 	 */
 	protected function setUp(): void {
-		$this->appName = 'tasks';
+		$this->appName = 'tasks_board';
 		$this->userId = 'admin';
 		$this->settings = $this->getMockBuilder(IConfig::class)
 			->disableOriginalConstructor()
@@ -60,6 +60,21 @@ class CollectionsServiceTest extends TestCase {
 				'displayName' => 'Important',
 				'show' => 2,
 				'icon' => 'Star'],
+			[
+				'id' => "assigned",
+				'displayName' => 'Assigned to me',
+				'show' => 2,
+				'icon' => 'AccountCheckOutline'],
+			[
+				'id' => "followup",
+				'displayName' => 'Follow-up due',
+				'show' => 2,
+				'icon' => 'BellAlertOutline'],
+			[
+				'id' => "waiting",
+				'displayName' => 'Waiting',
+				'show' => 2,
+				'icon' => 'TimerSandEmpty'],
 			[
 				'id' => "today",
 				'displayName' => 'Today',
@@ -101,6 +116,10 @@ class CollectionsServiceTest extends TestCase {
 			->will(
 				$this->returnValueMap($map)
 			);
+
+		$this->l10n->expects($this->any())
+			->method('getLanguageCode')
+			->willReturn('en');
 
 		$result = $this->collectionsService->getAll();
 

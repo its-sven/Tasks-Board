@@ -20,10 +20,11 @@
  *
  */
 
-namespace OCA\Tasks\AppInfo;
+namespace OCA\TasksBoard\AppInfo;
 
-use OCA\Tasks\Dashboard\TasksWidget;
-use OCA\Tasks\Listeners\BeforeTemplateRenderedListener;
+use OCA\TasksBoard\Dashboard\TasksWidget;
+use OCA\TasksBoard\Listeners\BeforeTemplateRenderedListener;
+use OCA\TasksBoard\Notification\Notifier;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
 use OCP\AppFramework\Bootstrap\IBootstrap;
@@ -32,7 +33,7 @@ use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 
 class Application extends App implements IBootstrap {
 	/** @var string */
-	public const APP_ID = 'tasks';
+	public const APP_ID = 'tasks_board';
 
 	/**
 	 * @param array $params
@@ -45,6 +46,9 @@ class Application extends App implements IBootstrap {
 		$context->registerDashboardWidget(TasksWidget::class);
 
 		$context->registerEventListener(BeforeTemplateRenderedEvent::class, BeforeTemplateRenderedListener::class);
+
+		// Tasks Board: notifications for assigned and completed tasks
+		$context->registerNotifierService(Notifier::class);
 	}
 
 	public function boot(IBootContext $context): void {

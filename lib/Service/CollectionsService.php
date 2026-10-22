@@ -20,7 +20,7 @@
  *
  */
 
-namespace OCA\Tasks\Service;
+namespace OCA\TasksBoard\Service;
 
 use OCP\IConfig;
 use OCP\IL10N;
@@ -71,6 +71,23 @@ class CollectionsService {
 				'displayName' => (string)$this->l10n->t('Important'),
 				'show' => 2,
 				'icon' => 'Star'],
+			// Tasks Board: tasks assigned to the current user
+			[
+				'id' => "assigned",
+				'displayName' => str_starts_with($this->l10n->getLanguageCode(), 'de') ? 'Mir zugewiesen' : 'Assigned to me',
+				'show' => 2,
+				'icon' => 'AccountCheckOutline'],
+			// Tasks Board: follow-ups that are due and all waiting tasks
+			[
+				'id' => "followup",
+				'displayName' => str_starts_with($this->l10n->getLanguageCode(), 'de') ? 'Wiedervorlage fällig' : 'Follow-up due',
+				'show' => 2,
+				'icon' => 'BellAlertOutline'],
+			[
+				'id' => "waiting",
+				'displayName' => str_starts_with($this->l10n->getLanguageCode(), 'de') ? 'Wartet' : 'Waiting',
+				'show' => 2,
+				'icon' => 'TimerSandEmpty'],
 			[
 				'id' => "today",
 				'displayName' => (string)$this->l10n->t('Today'),

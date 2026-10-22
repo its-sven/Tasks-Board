@@ -31,12 +31,12 @@ class AppTest extends TestCase {
 
 	public function setUp(): void {
 		parent::setUp();
-		$this->app = new \OCA\Tasks\AppInfo\Application();
+		$this->app = new \OCA\TasksBoard\AppInfo\Application();
 		$this->container = $this->app->getContainer();
 	}
 
 	public function testAppInstalled() {
 		$appManager = $this->container->query('OCP\App\IAppManager');
-		$this->assertTrue($appManager->isInstalled('tasks'));
+		$this->assertTrue($appManager->isInstalled('tasks_board'));
 	}
 }

@@ -27,6 +27,7 @@ import { isParentInList, momentToICALTime, parseString } from './storeHelper.js'
 import { getDefaultRecurrenceRuleObject } from '../models/recurrenceRule.js'
 import SyncStatus from '../models/syncStatus.js'
 import Task from '../models/task.js'
+import { tbBeforeCreateTask } from '../tb/progress.js'
 
 import { DateTimeValue, RecurValue } from '@nextcloud/calendar-js'
 import { showError } from '@nextcloud/dialogs'
@@ -890,6 +891,9 @@ const actions = {
 				}
 			}
 		}
+
+		// Tasks Board: status, priority and tags of new tasks
+		tbBeforeCreateTask(task, context.getters, taskData)
 
 		const vData = ICAL.stringify(task.jCal)
 

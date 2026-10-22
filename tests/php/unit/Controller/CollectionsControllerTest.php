@@ -20,10 +20,10 @@
  *
  */
 
-namespace OCA\Tasks\Tests\Unit\Controller;
+namespace OCA\TasksBoard\Tests\Unit\Controller;
 
-use OCA\Tasks\Controller\CollectionsController;
-use OCA\Tasks\Service\CollectionsService;
+use OCA\TasksBoard\Controller\CollectionsController;
+use OCA\TasksBoard\Service\CollectionsService;
 use OCP\IRequest;
 
 use PHPUnit\Framework\TestCase;
@@ -34,7 +34,7 @@ class CollectionsControllerTest extends TestCase {
 	private $request;
 	private $controller;
 
-	use \OCA\Tasks\Controller\Response;
+	use \OCA\TasksBoard\Controller\Response;
 
 	/**
 	 * Gets run before each test

@@ -20,9 +20,9 @@
  *
  */
 
-namespace OCA\Tasks\Tests\Unit\Service;
+namespace OCA\TasksBoard\Tests\Unit\Service;
 
-use OCA\Tasks\Service\SettingsService;
+use OCA\TasksBoard\Service\SettingsService;
 use OCP\App\IAppManager;
 use OCP\IConfig;
 
@@ -39,7 +39,7 @@ class SettingsServiceTest extends TestCase {
 	 * Gets run before each test
 	 */
 	protected function setUp(): void {
-		$this->appName = 'tasks';
+		$this->appName = 'tasks_board';
 		$this->userId = 'admin';
 		$this->config = $this->getMockBuilder(IConfig::class)
 			->disableOriginalConstructor()
@@ -65,7 +65,12 @@ class SettingsServiceTest extends TestCase {
 			'initialRoute' => '/collections/all',
 			'calendarEnabled' => true,
 			'showTasks' => true,
-			'calendarView' => 'dayGridMonth'
+			'calendarView' => 'dayGridMonth',
+			'tbViews' => '{"calendar:personal":{"mode":"board"}}',
+			'tbPrefs' => '{"autoProgress":true}',
+			'tbTagList' => '["Server","Backup"]',
+			'tbWaitingTag' => 'on hold',
+			'tbWaitingTagDefault' => 'wartet',
 		];
 
 		$userValueMap = [
@@ -113,6 +118,20 @@ class SettingsServiceTest extends TestCase {
 			],
 			[
 				$this->userId,
+				$this->appName,
+				'various_tbViews',
+				'{}',
+				'{"calendar:personal":{"mode":"board"}}'
+			],
+			[
+				$this->userId,
+				$this->appName,
+				'various_tbPrefs',
+				'{}',
+				'{"autoProgress":true}'
+			],
+			[
+				$this->userId,
 				'calendar',
 				'showTasks',
 				'yes',
@@ -128,6 +147,18 @@ class SettingsServiceTest extends TestCase {
 		];
 
 		$appValueMap = [
+			[
+				$this->appName,
+				'tag_list',
+				'[]',
+				'["Server","Backup"]'
+			],
+			[
+				$this->appName,
+				'waiting_tag',
+				'',
+				'on hold'
+			],
 			[
 				'calendar',
 				'currentView',
@@ -153,6 +184,12 @@ class SettingsServiceTest extends TestCase {
 			->will(
 				$this->returnValueMap($appValueMap)
 			);
+
+		$this->config->expects($this->any())
+			->method('getSystemValue')
+			->willReturnMap([
+				['default_language', '', 'de_DE'],
+			]);
 
 		$this->appManager->expects($this->any())
 			->method('isEnabledForUser')

@@ -195,7 +195,7 @@ export default {
 			this.created = true
 		},
 		openNewTask() {
-			window.location = generateUrl('apps/tasks') + `/#/calendars/${this.pendingCalendar.id}/tasks/${this.newTask.uri}`
+			window.location = generateUrl('apps/' + appName) + `/#/calendars/${this.pendingCalendar.id}/tasks/${this.newTask.uri}`
 		},
 	},
 

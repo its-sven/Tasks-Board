@@ -20,7 +20,7 @@
  *
  */
 
-namespace OCA\Tasks\Service;
+namespace OCA\TasksBoard\Service;
 
 use OCP\App\IAppManager;
 use OCP\IConfig;
@@ -70,6 +70,15 @@ class SettingsService {
 		$sortDirection = (bool)$this->config->getUserValue($this->userId, $this->appName, 'various_sortDirection', false);
 		$allDay = (bool)$this->config->getUserValue($this->userId, $this->appName, 'various_allDay', false);
 		$initialRoute = (string)$this->config->getUserValue($this->userId, $this->appName, 'various_initialRoute', '/collections/all');
+		// Tasks Board: list/board view per list and collection (JSON)
+		$tbViews = (string)$this->config->getUserValue($this->userId, $this->appName, 'various_tbViews', '{}');
+		// Tasks Board: preferences (automatic progress, inheritance) (JSON)
+		$tbPrefs = (string)$this->config->getUserValue($this->userId, $this->appName, 'various_tbPrefs', '{}');
+		// Tasks Board: fixed tag list for everyone (JSON, set by administrators)
+		$tbTagList = (string)$this->config->getAppValue($this->appName, 'tag_list', '[]');
+		// Tasks Board: tag that marks waiting tasks (set by administrators)
+		$tbWaitingTag = WaitingTag::get($this->config);
+		$tbWaitingTagDefault = WaitingTag::defaultTag($this->config);
 
 		$calendarEnabled = $this->appManager->isEnabledForUser('calendar');
 		$defaultInitialView = $this->config->getAppValue('calendar', 'currentView', 'dayGridMonth');
@@ -86,7 +95,12 @@ class SettingsService {
 			'initialRoute' => $initialRoute,
 			'calendarEnabled' => $calendarEnabled,
 			'showTasks' => $showTasks,
-			'calendarView' => $calendarView
+			'calendarView' => $calendarView,
+			'tbViews' => $tbViews,
+			'tbPrefs' => $tbPrefs,
+			'tbTagList' => $tbTagList,
+			'tbWaitingTag' => $tbWaitingTag,
+			'tbWaitingTagDefault' => $tbWaitingTagDefault,
 		];
 	}
 

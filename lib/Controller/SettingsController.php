@@ -20,9 +20,9 @@
  *
  */
 
-namespace OCA\Tasks\Controller;
+namespace OCA\TasksBoard\Controller;
 
-use \OCA\Tasks\Service\SettingsService;
+use \OCA\TasksBoard\Service\SettingsService;
 use \OCP\AppFramework\Controller;
 use \OCP\IRequest;
 

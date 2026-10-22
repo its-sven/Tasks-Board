@@ -241,7 +241,7 @@ const getters = {
 				.filter(task => {
 					return task.closed === false && (!task.related || !isParentInList(task, calendar.tasks))
 				})
-			if (rootState.tasks.searchQuery || rootState.tasks.filter.tags.length) {
+			if (rootState.tasks.searchQuery || rootState.tasks.filter.tags.length || rootState.tasks.filter.tbAssignees?.length) {
 				tasks = tasks.filter(task => {
 					if (task.matches(rootState.tasks.searchQuery, rootState.tasks.filter)) {
 						return true

@@ -1,3 +1,33 @@
+## 1.0.0 - 2026-10-22
+
+First release of Tasks Board, a fork of Nextcloud Tasks 0.18.1 (main branch of 2026-10-22). The entries below list the changes compared to Nextcloud Tasks; the older entries are the history of Nextcloud Tasks.
+
+### Added
+- Board (Kanban) with the columns Open, In progress, Waiting, Done and optionally Cancelled, rows per priority, list, main task, tag or person, cards or main tasks only, order by hand, subtasks on the card
+- Table view with columns to show, hide, move and sort, changes right in the cells (status, priority, person, due date) and rows for main tasks or all tasks
+- Dashboard with tiles, state ring, distribution per person, list, project, priority and tag, history of 12 weeks, tasks that need attention and filters for lists, project, persons and tags
+- Assign a task to a person with access to the list (stored as ATTENDEE with SCHEDULE-AGENT=CLIENT), collection "Assigned to me", filter, sorting, grouping and board rows by person
+- Waiting tasks and follow-ups: collections "Waiting" and "Follow-up due", dialog for the follow-up date; the waiting tag can be set by administrators (default `wartet` on German instances, `waiting` otherwise)
+- Notifications when a task is assigned, when an assigned task is completed, when a follow-up date is reached and when a task is due today, each with its own switch
+- Templates: a template list ("Templates" or "Vorlagen", or chosen in the settings) and "Create from template" with all subtasks
+- Fixed tag list for everyone, maintained by administrators; other tags are marked as not in the list
+- Multi-select in list, board and table with actions for all selected tasks
+- Keyboard shortcuts with an overview (`?`)
+- Sort orders status, progress, person, list and main task, a separate order for subtasks, grouping in the list view by status, tag or priority
+- Automatic progress of main tasks from their subtasks; new subtasks take over priority, tags and person of the main task
+- Notes editor with a Markdown toolbar, preview and checklists that can be ticked off directly
+- Choice of the target list when a task is added in a collection
+- List as cards or compact rows, collapsible subtasks, view options, sidebar sections with "More fields"
+- Navigation and sidebar can be resized and collapse when dragged very narrow
+- Own app icon
+
+### Changed
+- Own app id `tasks_board` and namespace `OCA\TasksBoard`, so the app runs side by side with Nextcloud Tasks on the same CalDAV task lists
+- Modern, compact look; the dark theme is a little lighter inside the app
+- The note is always shown below the details in the sidebar instead of in its own tab
+- New tasks get the status "Needs action"
+- The dashboard widget and the Talk action carry "(Tasks Board)" in their name
+
 ## 0.18.1 - 2026-06-29
 
 ### Fixed

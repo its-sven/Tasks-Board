@@ -20,9 +20,9 @@
  *
  */
 
-namespace OCA\Tasks\Controller;
+namespace OCA\TasksBoard\Controller;
 
-use \OCA\Tasks\Service\CollectionsService;
+use \OCA\TasksBoard\Service\CollectionsService;
 use \OCP\AppFramework\Controller;
 use \OCP\IRequest;
 

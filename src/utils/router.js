@@ -35,7 +35,7 @@ import { loadState } from '@nextcloud/initial-state'
  */
 export function getInitialRoute() {
 	try {
-		return loadState('tasks', 'initialRoute')
+		return loadState(appName, 'initialRoute')
 	} catch (error) {
 		return '/collections/all'
 	}

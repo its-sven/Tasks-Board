@@ -20,7 +20,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 -->
 
 <template>
-	<NcContent app-name="tasks">
+	<NcContent :app-name="appName">
 		<AppNavigation />
 
 		<NcAppContent @click="closeAppNavigation">
@@ -28,11 +28,14 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 		</NcAppContent>
 
 		<RouterView name="AppSidebar" />
+		<!-- Tasks Board: keyboard shortcuts -->
+		<TbShortcuts />
 	</NcContent>
 </template>
 
 <script>
 import AppNavigation from './views/AppNavigation.vue'
+import TbShortcuts from './tb/components/TbShortcuts.vue'
 import client from './services/cdav.js'
 
 import { emit, subscribe, unsubscribe } from '@nextcloud/event-bus'
@@ -49,12 +52,14 @@ export default {
 		AppNavigation,
 		NcAppContent,
 		NcContent,
+		TbShortcuts,
 	},
 	inject: ['$OCA'],
 	setup() {
 		const isMobile = useIsMobile()
 		return {
 			isMobile,
+			appName,
 		}
 	},
 	data() {

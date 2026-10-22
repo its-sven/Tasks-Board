@@ -1,4 +1,6 @@
 <?php
 
-script('tasks', 'tasks-main');
-style('tasks', 'tasks-main');
+use OCA\TasksBoard\AppInfo\Application;
+
+script(Application::APP_ID, Application::APP_ID . '-main');
+style(Application::APP_ID, Application::APP_ID . '-main');

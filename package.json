@@ -1,14 +1,14 @@
 {
-  "name": "tasks",
-  "description": "Nextcloud - Tasks",
-  "version": "0.18.1",
+  "name": "tasks-board",
+  "description": "Tasks Board - tasks with board, table and dashboard for Nextcloud (based on Nextcloud Tasks)",
+  "version": "1.0.0",
   "author": {
     "name": "Raimund Schlüßler",
     "email": "raimund.schluessler@mailbox.org"
   },
-  "license": "AGPLv3",
+  "license": "AGPL-3.0-or-later",
   "private": true,
-  "homepage": "https://github.com/nextcloud/tasks",
+  "homepage": "https://github.com/its-sven/Tasks-Board",
   "scripts": {
     "build": "vite build --mode production",
     "dev": "vite build --mode development",
@@ -21,12 +21,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:nextcloud/tasks.git"
+    "url": "https://github.com/its-sven/Tasks-Board.git"
   },
   "type": "module",
-  "bugs": "https://github.com/nextcloud/tasks/issues",
-  "contributors": [],
+  "bugs": "https://github.com/its-sven/Tasks-Board/issues",
+  "contributors": [
+    {
+      "name": "Sven Würth"
+    }
+  ],
   "dependencies": {
+    "@nextcloud/auth": "^2.6.0",
     "@nextcloud/axios": "^2.6.0",
     "@nextcloud/calendar-js": "8.1.7",
     "@nextcloud/cdav-library": "2.8.0",
@@ -47,6 +52,7 @@
     "markdown-it-emoji": "^3.1.0",
     "markdown-it-link-attributes": "^4.0.1",
     "markdown-it-task-lists": "^2.1.1",
+    "sortablejs": "^1.15.7",
     "sortablejs-vue3": "^1.3.0",
     "vue": "^3.5.44",
     "vue-material-design-icons": "^5.4.0",

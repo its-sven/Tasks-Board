@@ -35,10 +35,16 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 		class="task-item"
 		@dragstart="dragStart($event)">
 		<div :task-id="task.uri"
-			:class="{'task-item__body--active': isTaskOpen()}"
+			:data-task-key="task.key"
+			:class="{'task-item__body--active': isTaskOpen(), 'task-item__body--tb-selected': $store.getters.isTbSelected(task.key)}"
 			class="task-item__body reactive"
 			type="task"
 			@click="navigate($event)">
+			<!-- Tasks Board: open/close the subtasks -->
+			<TbSubtaskToggle v-if="filteredSubtasks.length"
+				:expanded="showSubtasks"
+				:count="filteredSubtasks.length"
+				@toggle="tbToggleSubtasks" />
 			<!-- Checkbox -->
 			<TaskCheckbox :completed="task.completed"
 				class="no-nav"
@@ -56,6 +62,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					<span v-for="(tag, index) in task.tags"
 						:key="index"
 						class="tag no-nav"
+						:class="{ 'tag--tb-waiting': tbIsWaitingTag(tag) }"
 						@click="addTagToFilter(tag)">
 						<span :title="tag" class="tag-label">
 							{{ tag }}
@@ -82,6 +89,15 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					:title="t('tasks', 'Task has a note')"
 					@click="openAppSidebarTab($event, 'app-sidebar-tab-notes')"
 					@dblclick.stop="openAppSidebarTab($event, 'app-sidebar-tab-notes', true)" />
+				<!-- Tasks Board: closed subtasks, follow-up due, assigned person -->
+				<span v-if="!showSubtasks && filteredSubtasks.length"
+					class="tb-subcount"
+					:title="tbt('{done} of {total} subtasks done', tbSubtaskCount)">
+					<FileTreeOutline :size="16" />
+					{{ tbSubtaskCount.done }}/{{ tbSubtaskCount.total }}
+				</span>
+				<TbFollowUpBadge :task="task" class="no-nav" />
+				<TbAvatar :person="task._tbAssignee" class="tb-row-avatar" />
 				<div v-if="task.due || task.completed" :class="{'date--overdue': overdue(task.dueMoment) && !task.completed}" class="date">
 					<span class="date__short" :class="{ 'date__short--completed': task.completed }">{{ dueDateShort }}</span>
 					<span class="date__long" :class="{ 'date__long--date-only': task.allDay && !task.completed, 'date__long--completed': task.completed }">{{ dueDateLong }}</span>
@@ -201,6 +217,13 @@ import { overdue, sort, searchSubTasks, isTaskInList } from '../store/storeHelpe
 import TaskCheckbox from './TaskCheckbox.vue'
 import TaskStatusDisplay from './TaskStatusDisplay.vue'
 import TaskDragContainer from './TaskDragContainer.vue'
+import TbAvatar from '../tb/components/TbAvatar.vue'
+import TbFollowUpBadge from '../tb/components/TbFollowUpBadge.vue'
+import TbSubtaskToggle from '../tb/components/TbSubtaskToggle.vue'
+import { tbt } from '../tb/l10n.js'
+import { isWaitingTagName } from '../tb/waiting.js'
+import FileTreeOutline from 'vue-material-design-icons/FileTreeOutline.vue'
+import { handleSelectClick } from '../tb/store/selection.js'
 import Task from '../models/task.js'
 import openNewTask from '../mixins/openNewTask.js'
 import { startDateString } from '../utils/dateStrings.js'
@@ -241,6 +264,10 @@ export default {
 	},
 	components: {
 		CreateMultipleTasksDialog,
+		TbAvatar,
+		TbFollowUpBadge,
+		TbSubtaskToggle,
+		FileTreeOutline,
 		TaskCheckbox,
 		TaskStatusDisplay,
 		TaskDragContainer,
@@ -399,6 +426,12 @@ export default {
 			})
 		},
 
+		/** Tasks Board: done/total of the subtasks */
+		tbSubtaskCount() {
+			const subTasks = Object.values(this.task.subTasks)
+			return { done: subTasks.filter(task => task.closed).length, total: subTasks.length }
+		},
+
 		hasHiddenSubtasks() {
 			return (this.hasCompletedSubtasks && this.task.hideCompletedSubtasks) || (this.filteredSubtasks.length && this.task.hideSubtasks)
 		},
@@ -467,6 +500,10 @@ export default {
 		 * @return {boolean} If we show the subtasks
 		 */
 		showSubtasks() {
+			// Tasks Board: closed with the arrow (remembered per browser); a search or an open subtask shows them anyway
+			if (this.$store.getters.isTbCollapsed(this.task.key) && !this.searchQuery && !this.isDescendantOpen()) {
+				return false
+			}
 			if (!this.task.hideSubtasks || this.searchQuery || this.isTaskOpen() || this.isDescendantOpen()) {
 				return true
 			} else {
@@ -496,6 +533,8 @@ export default {
 		t,
 		n,
 		startDateString,
+		tbt,
+		tbIsWaitingTag: isWaitingTagName,
 
 		...mapActions([
 			'toggleCompleted',
@@ -597,6 +636,10 @@ export default {
 		 * @param {object} $event the event that triggered navigation
 		 */
 		async navigate($event) {
+			// Tasks Board: Ctrl/Cmd/Shift+click or selection mode selects instead of opening
+			if (handleSelectClick(this.$store, this.task, $event)) {
+				return
+			}
 			if (!$event.target.closest('.no-nav')
 				&& (this.$route.params.taskId !== this.task.uri || this.$route.params.collectionParam !== this.collectionParam)) {
 				if (!this.task.loadedCompleted) {
@@ -648,7 +691,20 @@ export default {
 			emit('tasks:edit-appsidebar-summary', true)
 		},
 
+		/** Tasks Board: arrow in front of the row */
+		tbToggleSubtasks() {
+			if (this.task.hideSubtasks) {
+				// Hidden with the upstream menu entry: show them again
+				this.toggleSubtasksVisibility(this.task)
+				this.$store.commit('setTbCollapsed', { keys: [this.task.key], collapsed: false })
+				return
+			}
+			this.$store.commit('setTbCollapsed', { keys: [this.task.key] })
+		},
+
 		async openSubtaskInput() {
+			// Tasks Board: a new subtask needs the subtasks open
+			this.$store.commit('setTbCollapsed', { keys: [this.task.key], collapsed: false })
 			this.showSubtaskInput = true
 			await this.$nextTick()
 			this.$refs.input.$refs.inputField.$refs.input.focus()

@@ -22,6 +22,16 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 <template>
 	<NcAppNavigation>
 		<template #list>
+			<!-- Tasks Board: dashboard -->
+			<NcAppNavigationItem id="tb-dashboard"
+				:to="{ name: 'dashboard' }"
+				:name="tbt('Dashboard')"
+				class="collection reactive tb-nav-dashboard"
+				@click="setInitialRoute('/dashboard')">
+				<template #icon>
+					<ViewDashboardOutline :size="20" />
+				</template>
+			</NcAppNavigationItem>
 			<NcAppNavigationItem v-for="collection in collections"
 				v-show="!hideCollection(collection)"
 				:id="'collection_' + collection.id"
@@ -85,6 +95,8 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 			<Trashbin v-if="hasTrashBin" />
 		</template>
 		<template #footer>
+			<!-- Tasks Board: drag handle for the width -->
+			<TbNavResizer />
 			<AppNavigationSettings />
 		</template>
 	</NcAppNavigation>
@@ -95,6 +107,8 @@ import ListItemCalendar from '../components/AppNavigation/ListItemCalendar.vue'
 import Colorpicker from '../components/AppNavigation/Colorpicker.vue'
 import AppNavigationSettings from '../components/AppNavigation/AppNavigationSettings.vue'
 import Trashbin from '../components/AppNavigation/Trashbin.vue'
+import TbNavResizer from '../tb/components/TbNavResizer.vue'
+import { tbt } from '../tb/l10n.js'
 
 import { showError } from '@nextcloud/dialogs'
 import { translate as t } from '@nextcloud/l10n'
@@ -103,6 +117,10 @@ import NcAppNavigationItem from '@nextcloud/vue/components/NcAppNavigationItem'
 import NcCounterBubble from '@nextcloud/vue/components/NcCounterBubble'
 import NcTextField from '@nextcloud/vue/components/NcTextField'
 
+// Tasks Board: icon of the collection "Assigned to me"
+import AccountCheckOutline from 'vue-material-design-icons/AccountCheckOutline.vue'
+import BellAlertOutline from 'vue-material-design-icons/BellAlertOutline.vue'
+import TimerSandEmpty from 'vue-material-design-icons/TimerSandEmpty.vue'
 import CalendarToday from 'vue-material-design-icons/CalendarToday.vue'
 import CalendarWeek from 'vue-material-design-icons/CalendarWeek.vue'
 import Check from 'vue-material-design-icons/Check.vue'
@@ -110,6 +128,7 @@ import CircleOutline from 'vue-material-design-icons/CircleOutline.vue'
 import Plus from 'vue-material-design-icons/Plus.vue'
 import Star from 'vue-material-design-icons/StarOutline.vue'
 import TrendingUp from 'vue-material-design-icons/TrendingUp.vue'
+import ViewDashboardOutline from 'vue-material-design-icons/ViewDashboardOutline.vue'
 
 import { Sortable } from 'sortablejs-vue3'
 import { vOnClickOutside as ClickOutside } from '@vueuse/components'
@@ -125,7 +144,12 @@ export default {
 		NcCounterBubble,
 		NcTextField,
 		AppNavigationSettings,
+		TbNavResizer,
+		ViewDashboardOutline,
 		Sortable,
+		AccountCheckOutline,
+		BellAlertOutline,
+		TimerSandEmpty,
 		CalendarToday,
 		CalendarWeek,
 		Check,
@@ -166,6 +190,7 @@ export default {
 	},
 	methods: {
 		t,
+		tbt,
 
 		...mapActions([
 			'appendCalendar',

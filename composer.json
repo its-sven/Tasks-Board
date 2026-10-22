@@ -1,12 +1,15 @@
 {
-    "name": "nextcloud/tasks",
-    "description": "Nextcloud Tasks",
+    "name": "its-sven/tasks-board",
+    "description": "Tasks Board for Nextcloud (based on Nextcloud Tasks)",
     "type": "project",
-    "license": "AGPL",
+    "license": "AGPL-3.0-or-later",
     "authors": [
         {
             "name": "Bernhard Posselt",
             "email": "dev@bernhard-posselt.com"
+        },
+        {
+            "name": "Sven Würth"
         }
     ],
     "require": {

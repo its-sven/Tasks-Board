@@ -24,7 +24,7 @@
 import { getLoggerBuilder } from '@nextcloud/logger'
 
 const logger = getLoggerBuilder()
-	.setApp('tasks')
+	.setApp(appName)
 	.detectUser()
 	.build()
 

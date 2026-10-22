@@ -2,6 +2,9 @@ import calendars, { Calendar } from '../../../src/store/calendars.js'
 import collections from '../../../src/store/collections.js'
 import tasks from '../../../src/store/tasks.js'
 import settings from '../../../src/store/settings.js'
+import tbBoard from '../../../src/tb/store/board.js'
+import tbAssignment from '../../../src/tb/store/assignment.js'
+import tbSelection from '../../../src/tb/store/selection.js'
 import Task from '../../../src/models/task.js'
 
 import { loadICS } from '../../assets/loadAsset.js'
@@ -14,6 +17,9 @@ const store = createStore({
 		collections,
 		tasks,
 		settings,
+		tbBoard,
+		tbAssignment,
+		tbSelection,
 	},
 })
 

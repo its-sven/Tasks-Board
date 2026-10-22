@@ -20,9 +20,9 @@
  *
  */
 
-namespace OCA\Tasks\Controller;
+namespace OCA\TasksBoard\Controller;
 
-use \OCA\Tasks\Service\SettingsService;
+use \OCA\TasksBoard\Service\SettingsService;
 use \OCP\AppFramework\Controller;
 use \OCP\AppFramework\Http\TemplateResponse;
 use \OCP\IInitialStateService;
@@ -61,6 +61,6 @@ class PageController extends Controller {
 			$this->initialStateService->provideInitialState($this->appName, $setting, $value);
 		}
 
-		return new TemplateResponse('tasks', 'main');
+		return new TemplateResponse($this->appName, 'main');
 	}
 }

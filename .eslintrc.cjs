@@ -6,6 +6,7 @@ module.exports = {
 		OCA: false,
 		moment: true,
 		appVersion: true,
+		appName: true,
 	},
 	extends: [
 		'@nextcloud/eslint-config/vue3',

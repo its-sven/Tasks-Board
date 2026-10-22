@@ -25,8 +25,9 @@
 declare(strict_types=1);
 
 
-namespace OCA\Tasks\Listeners;
+namespace OCA\TasksBoard\Listeners;
 
+use OCA\TasksBoard\AppInfo\Application;
 use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
@@ -51,9 +52,9 @@ class BeforeTemplateRenderedListener implements IEventListener {
 
 		$pathInfo = $this->request->getPathInfo();
 		if (strpos($pathInfo, '/call/') === 0 || strpos($pathInfo, '/apps/spreed') === 0) {
-			Util::addScript('tasks', 'tasks-talk');
-			Util::addStyle('tasks', 'tasks-talk');
-			Util::addStyle('tasks', 'tasks-icon');
+			Util::addScript(Application::APP_ID, Application::APP_ID . '-talk');
+			Util::addStyle(Application::APP_ID, Application::APP_ID . '-talk');
+			Util::addStyle(Application::APP_ID, 'tasks-icon');
 		}
 	}
 }

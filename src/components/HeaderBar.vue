@@ -42,9 +42,17 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					<Plus :size="20" />
 				</template>
 			</NcTextField>
+			<!-- Tasks Board: choose the list new tasks are added to -->
+			<TbTargetListPicker @chosen="focusInput" />
+			<!-- Tasks Board: copy a template with its subtasks -->
+			<TbTemplateButton />
 		</div>
+		<TbViewSwitch />
 		<FilterDropdown />
-		<SortorderDropdown />
+		<TbSortDropdown />
+		<TbBoardOptions />
+		<TbSelectionToggle />
+		<TbSelectionBar />
 		<CreateMultipleTasksDialog v-if="showCreateMultipleTasksModal"
 			:calendar="calendar"
 			:tasks-to-create="multipleTasks"
@@ -56,7 +64,16 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 
 <script>
 import FilterDropdown from './FilterDropdown.vue'
-import SortorderDropdown from './SortorderDropdown.vue'
+import TbSortDropdown from '../tb/components/TbSortDropdown.vue'
+import TbBoardOptions from '../tb/components/TbBoardOptions.vue'
+import TbViewSwitch from '../tb/components/TbViewSwitch.vue'
+import { tbt } from '../tb/l10n.js'
+import { currentPerson } from '../tb/store/assignment.js'
+import TbTargetListPicker from '../tb/components/TbTargetListPicker.vue'
+import TbSelectionBar from '../tb/components/TbSelectionBar.vue'
+import TbSelectionToggle from '../tb/components/TbSelectionToggle.vue'
+import TbTemplateButton from '../tb/components/TbTemplateButton.vue'
+import { showSuccess } from '@nextcloud/dialogs'
 import openNewTask from '../mixins/openNewTask.js'
 
 import { translate as t } from '@nextcloud/l10n'
@@ -75,7 +92,13 @@ export default {
 		CreateMultipleTasksDialog,
 		NcTextField,
 		FilterDropdown,
-		SortorderDropdown,
+		TbBoardOptions,
+		TbTargetListPicker,
+		TbSelectionBar,
+		TbSelectionToggle,
+		TbSortDropdown,
+		TbTemplateButton,
+		TbViewSwitch,
 		Plus,
 	},
 	mixins: [openNewTask],
@@ -90,7 +113,12 @@ export default {
 	},
 	computed: {
 		calendar() {
-			return this.getCalendarByRoute(this.$route)
+			// Tasks Board: the list chosen next to the input (default: this list or the default list)
+			return this.$store.getters.tbTargetCalendar(this.$route) || this.getCalendarByRoute(this.$route)
+		},
+		/** Tasks Board: whether the new task goes to another list than the one shown */
+		tbOtherList() {
+			return !!this.$route.params.calendarId && this.calendar?.id !== this.$route.params.calendarId
 		},
 		...mapGetters({
 			getCalendarByRoute: 'getCalendarByRoute',
@@ -105,6 +133,13 @@ export default {
 				return t('tasks', 'Add a task due today to "{calendar}"…', { calendar: this.calendar.displayName }, undefined, { sanitize: false, escape: false })
 			case 'current':
 				return t('tasks', 'Add a current task to "{calendar}"…', { calendar: this.calendar.displayName }, undefined, { sanitize: false, escape: false })
+			// Tasks Board: new tasks in "Assigned to me" are assigned to the current user
+			case 'assigned':
+				return tbt('Add a task assigned to me to "{calendar}"…', { calendar: this.calendar.displayName })
+			case 'waiting':
+				return tbt('Add a waiting task (follow-up in a week) to "{calendar}"…', { calendar: this.calendar.displayName })
+			case 'followup':
+				return tbt('Add a follow-up for today to "{calendar}"…', { calendar: this.calendar.displayName })
 			default:
 				return t('tasks', 'Add a task to "{calendar}"…', { calendar: this.calendar.displayName }, undefined, { sanitize: false, escape: false })
 			}
@@ -114,6 +149,10 @@ export default {
 		...mapActions([
 			'createTask',
 		]),
+
+		focusInput() {
+			this.$refs.input?.$refs?.inputField?.$refs?.input?.focus()
+		},
 
 		compositionstart() {
 			this.compositing = true
@@ -138,13 +177,17 @@ export default {
 
 			const data = {
 				summary: this.newTaskName,
-				// If the task is created in the calendar view,
-				// we set the current calendar
-				...(this.$route.params.calendarId && { calendar: this.calendar }),
+				// Tasks Board: always the chosen list
+				calendar: this.calendar,
 				...this.getAdditionalTaskProperties(),
 			}
 			const task = await this.createTask(data)
-			await this.openNewTask(task)
+			if (this.tbOtherList) {
+				// The task is not shown in this list, so don't open it
+				showSuccess(tbt('Task added to "{list}".', { list: this.calendar.displayName }))
+			} else {
+				await this.openNewTask(task)
+			}
 			this.newTaskName = ''
 			this.$refs.input.$refs.inputField.$refs.input.focus()
 		},
@@ -163,6 +206,15 @@ export default {
 			}
 			if (this.$route.params.collectionId === 'current') {
 				taskProperties.start = moment().format('YYYY-MM-DDTHH:mm:ss')
+			}
+			if (this.$route.params.collectionId === 'assigned') {
+				taskProperties.tbAssignee = currentPerson(this.$store.getters)
+			}
+			if (this.$route.params.collectionId === 'waiting') {
+				taskProperties.tbWaitDays = 7
+			}
+			if (this.$route.params.collectionId === 'followup') {
+				taskProperties.tbWaitDays = 0
 			}
 			return taskProperties
 		},

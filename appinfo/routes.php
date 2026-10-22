@@ -41,9 +41,25 @@ return [
 			'requirements' => array('collection' => '.+')
 		],
 
+		// Tasks Board: dashboard
+		['name' => 'page#index',				'url' => '/dashboard',	'verb' => 'GET', 'postfix' => 'view.dashboard'],
+		[
+			'name' => 'page#index',
+			'url' => '/dashboard/{path}',
+			'verb' => 'GET',
+			'postfix' => 'view.dashboard.path',
+			'requirements' => array('path' => '.+')
+		],
+
 		['name' => 'collections#getCollections','url' => '/api/v1/collections',										'verb' => 'GET'],
 		['name' => 'collections#setVisibility',	'url' => '/api/v1/collection/{collectionID}/visibility/{visibility}',	'verb' => 'POST'],
 		['name' => 'settings#get',				'url' => '/api/v1/settings',									'verb' => 'GET'],
 		['name' => 'settings#set',				'url' => '/api/v1/settings/{setting}',							'verb' => 'POST'],
+		// Tasks Board: assignment of tasks
+		['name' => 'board#assignees',				'url' => '/api/v1/board/assignees/{calendarId}',					'verb' => 'GET', 'requirements' => ['calendarId' => '.+']],
+		['name' => 'board#notify',				'url' => '/api/v1/board/notify',									'verb' => 'POST'],
+		// Tasks Board: fixed tag list and waiting tag (saving: administrators only)
+		['name' => 'board#setTagList',			'url' => '/api/v1/board/taglist',									'verb' => 'POST'],
+		['name' => 'board#setWaitingTag',		'url' => '/api/v1/board/waitingtag',								'verb' => 'POST'],
 	]
 ];

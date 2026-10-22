@@ -1,0 +1,808 @@
+/**
+ * SPDX-FileCopyrightText: 2026 Sven Würth
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+/*
+ * Tasks Board look: modern and compact.
+ *
+ * Restyles the upstream components without changing their templates.
+ * Everything is scoped to the app (.app-tasks_board) and uses the Nextcloud
+ * colour variables, so themes and dark mode keep working.
+ * The selectors repeat the upstream ones with one more class, so they win
+ * over the scoped upstream styles without !important where possible.
+ */
+
+$breakpoint-mobile: 1024px;
+
+// Dark theme: not pitch black. Inside the app the Nextcloud surface colours are
+// a few steps lighter, so all components (also upstream ones) follow along.
+@mixin tb-dark {
+	--color-main-background: #262626;
+	--color-main-background-rgb: 38, 38, 38;
+	--color-main-background-translucent: rgba(38, 38, 38, .97);
+	--color-main-background-blur: rgba(38, 38, 38, .8);
+	--color-background-hover: #313131;
+	--color-background-dark: #383838;
+	--color-background-darker: #404040;
+	--color-border: #3b3b3b;
+	--color-border-dark: #4a4a4a;
+	// Selects define their colours at the root, so they need the values directly
+	--vs-search-input-bg: #262626;
+	--vs-dropdown-bg: #262626;
+	--vs-selected-bg: #313131;
+	--tb-card-bg: #303030;
+	--tb-group-bg: #2c2c2c;
+	--tb-action-opacity: .6;
+	--tb-icon-opacity: .75;
+	// Dashboard charts (checked with the dataviz validator against #303030)
+	--tb-viz-inProgress: #3987e5;
+	--tb-viz-waiting: #c98500;
+	--tb-viz-open: #9085e9;
+	--tb-viz-overdue: #e66767;
+	--tb-viz-done: #199e70;
+	--tb-viz-new: #7d8590;
+	--tb-viz-grid: #3d3d3d;
+}
+
+.app-tasks_board {
+	--tb-radius: 10px;
+	--tb-radius-small: 8px;
+	--tb-row: 38px;
+	--tb-prio-high: #d1453b;
+	--tb-prio-medium: #e09b13;
+	--tb-prio-low: #3d7bd9;
+	--tb-status-open: #8a94a6;
+	--tb-status-progress: #3d7bd9;
+	--tb-status-waiting: #e09b13;
+	--tb-status-done: #2e9e5b;
+	--tb-status-cancelled: #9aa0a6;
+	--tb-chip-bg: var(--color-background-dark);
+	--tb-card-bg: var(--color-main-background);
+	--tb-group-bg: color-mix(in srgb, var(--color-background-hover) 70%, var(--color-main-background));
+	--tb-action-opacity: .4;
+	--tb-icon-opacity: .55;
+	--tb-selected: color-mix(in srgb, var(--color-primary-element) 13%, var(--color-main-background));
+	// Dashboard charts (checked with the dataviz validator against #ffffff):
+	// order in ring and bars: in progress, waiting, open, overdue
+	--tb-viz-inProgress: #2a78d6;
+	--tb-viz-waiting: #eda100;
+	--tb-viz-open: #6250d6;
+	--tb-viz-overdue: #d03b3b;
+	--tb-viz-done: #1baf7a;
+	--tb-viz-new: #9aa0a6;
+	--tb-viz-grid: #e6e6e6;
+
+	@at-root {
+		[data-theme-dark] &,
+		[data-themes*='dark'] & {
+			@include tb-dark;
+		}
+	}
+
+	@media (prefers-color-scheme: dark) {
+		@at-root {
+			[data-theme-default] & {
+				@include tb-dark;
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Chips (tags, priority) – shared by list, board and sidebar
+	// ---------------------------------------------------------------
+	.tb-chip {
+		display: inline-flex;
+		align-items: center;
+		max-width: 100%;
+		height: 20px;
+		padding: 0 7px;
+		border-radius: 6px;
+		background-color: var(--tb-chip-bg);
+		color: var(--color-text-maxcontrast);
+		font-size: 12px;
+		font-weight: 500;
+		line-height: 20px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+
+		&--waiting {
+			background-color: color-mix(in srgb, var(--tb-status-waiting) 16%, transparent);
+			color: color-mix(in srgb, var(--tb-status-waiting) 70%, var(--color-main-text));
+		}
+
+		&--high {
+			background-color: color-mix(in srgb, var(--tb-prio-high) 14%, transparent);
+			color: var(--tb-prio-high);
+		}
+
+		&--medium {
+			background-color: color-mix(in srgb, var(--tb-prio-medium) 18%, transparent);
+			color: color-mix(in srgb, var(--tb-prio-medium) 75%, var(--color-main-text));
+		}
+
+		&--low {
+			background-color: color-mix(in srgb, var(--tb-prio-low) 14%, transparent);
+			color: var(--tb-prio-low);
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Content area: white canvas instead of grey with white cards
+	// ---------------------------------------------------------------
+	.app-content.app-content {
+		background-color: var(--color-main-background) !important;
+	}
+
+	// ---------------------------------------------------------------
+	// Header: input, view switch, filter, sort, board settings
+	// ---------------------------------------------------------------
+	.header.header {
+		align-items: center;
+		gap: 6px;
+		min-height: 56px;
+		padding-top: 10px;
+		padding-bottom: 10px;
+		padding-right: 12px;
+		background-color: var(--color-main-background);
+		border-bottom: 1px solid var(--color-border);
+
+		@media only screen and (max-width: $breakpoint-mobile) {
+			padding-right: 8px;
+		}
+
+		// Narrow header (phone, or the sidebar is open): the input gets its own
+		// row, the buttons go below instead of squeezing the input
+		flex-wrap: wrap;
+		row-gap: 8px;
+		container: tb-header / inline-size;
+
+		@container tb-header (max-width: 800px) {
+			.header__input.header__input {
+				flex: 1 1 100%;
+				margin-right: 0;
+			}
+		}
+
+		.header__input {
+			display: flex;
+			align-items: center;
+			gap: 4px;
+			margin-right: 6px;
+			// Takes the free space, but does not force a new row
+			flex: 1 1 0;
+			width: auto;
+			min-width: 0;
+
+			> .input-field {
+				flex: 1 1 auto;
+				min-width: 0;
+			}
+
+			// The placeholder says it all; the label stays for screen readers only
+			.input-field__label {
+				position: absolute !important;
+				width: 1px !important;
+				height: 1px !important;
+				overflow: hidden !important;
+				clip: rect(0 0 0 0);
+				white-space: nowrap;
+			}
+
+			.input-field__input {
+				--input-border-color: transparent;
+				height: 36px;
+				min-height: 36px;
+				border-radius: var(--tb-radius);
+				background-color: var(--color-background-hover);
+				box-shadow: none;
+				font-size: 14px;
+				transition: background-color 120ms ease, box-shadow 120ms ease;
+
+				&:hover:not([disabled]) {
+					box-shadow: 0 0 0 1px var(--color-border-dark);
+				}
+
+				&:focus,
+				&:focus-visible {
+					background-color: var(--color-main-background);
+					box-shadow: 0 0 0 2px var(--color-primary-element), 0 0 0 5px color-mix(in srgb, var(--color-primary-element) 15%, transparent);
+				}
+
+				// Nextcloud hides the placeholder while the label is shown; the label is hidden here
+				&::placeholder {
+					opacity: 1 !important;
+				}
+			}
+
+			.input-field__icon--leading {
+				color: var(--color-text-maxcontrast);
+			}
+		}
+
+		.tb-switch {
+			margin-left: auto;
+		}
+
+		.filter {
+			margin-left: 0;
+		}
+
+		// Filter, sort and board settings look like one button group
+		> .action-item {
+			border-radius: var(--tb-radius-small);
+
+			.button-vue {
+				border-radius: var(--tb-radius-small);
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Task list
+	// ---------------------------------------------------------------
+	.app-content .task-list {
+		padding: 8px 12px 0;
+
+		@media only screen and (max-width: $breakpoint-mobile) {
+			padding: 4px 4px 0;
+		}
+
+		.grouped-tasks {
+			padding-top: 0;
+
+			> ol {
+				filter: none;
+
+				&.completed {
+					margin-top: 4px;
+				}
+			}
+		}
+
+		// Group headings (lists in collections, days in "week", groups, completed)
+		.heading {
+			margin-top: 18px !important;
+			margin-bottom: 2px;
+			padding-left: 10px;
+			min-height: 28px;
+
+			.heading__name {
+				font-size: 13px;
+				font-weight: 600;
+				opacity: 1;
+				color: var(--color-text-maxcontrast);
+			}
+
+			.heading__icon-bullet {
+				width: 10px;
+				min-width: 10px;
+				height: 10px;
+			}
+
+			&.button-vue {
+				width: auto;
+				min-height: 30px;
+				padding-inline: 6px 10px;
+				font-size: 13px;
+				font-weight: 600;
+				color: var(--color-text-maxcontrast);
+				border-radius: var(--tb-radius-small);
+			}
+		}
+
+		.grouped-tasks:first-child > .heading:first-child {
+			margin-top: 6px !important;
+		}
+	}
+
+	// Load completed tasks
+	.loadmore {
+		top: 0;
+		margin: 16px 0 8px;
+
+		.button-vue {
+			font-size: 13px;
+			color: var(--color-text-maxcontrast);
+		}
+	}
+
+	// One task row
+	.task-item.task-item {
+		> .task-item__body {
+			height: var(--tb-row);
+			// Gutter for the arrow that opens/closes the subtasks
+			padding-left: 22px;
+			padding-right: 4px;
+			border-top: none;
+			border-radius: var(--tb-radius-small) !important;
+			background-color: transparent;
+			transition: background-color 80ms ease;
+
+			&:hover {
+				background-color: var(--color-background-hover);
+			}
+
+			// Selected for actions on several tasks
+			&.task-item__body--tb-selected,
+			&.task-item__body--tb-selected:hover {
+				background-color: color-mix(in srgb, var(--color-primary-element) 20%, var(--color-main-background)) !important;
+				box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary-element) 55%, transparent);
+			}
+
+			&.task-item__body--active {
+				background-color: var(--tb-selected) !important;
+				box-shadow: inset 3px 0 0 var(--color-primary-element);
+
+				.tag {
+					background-color: var(--color-main-background) !important;
+				}
+			}
+
+			.task-body__info {
+				align-items: center;
+				gap: 6px;
+
+				.summary span {
+					line-height: var(--tb-row);
+					font-size: 14px;
+				}
+
+				.tags-list {
+					gap: 4px;
+
+					.tag {
+						height: 20px;
+						margin: 0;
+						padding: 0 7px;
+						border-radius: 6px !important;
+						background-color: var(--tb-chip-bg);
+						color: var(--color-text-maxcontrast);
+						font-size: 12px;
+						font-weight: 500;
+
+						&:hover {
+							color: var(--color-main-text);
+						}
+
+						&.tag--tb-waiting {
+							background-color: color-mix(in srgb, var(--tb-status-waiting) 16%, transparent);
+							color: color-mix(in srgb, var(--tb-status-waiting) 70%, var(--color-main-text));
+						}
+					}
+				}
+			}
+
+			.task-body__icons {
+				gap: 2px;
+				padding-left: 8px;
+				color: var(--color-text-maxcontrast);
+
+				> .material-design-icon {
+					opacity: var(--tb-icon-opacity);
+					margin-inline: 2px;
+
+					svg {
+						width: 16px;
+						height: 16px;
+					}
+				}
+
+				> div:not(.action-item) {
+					height: 24px;
+					padding: 0 6px;
+				}
+
+				> div.task-status-container {
+					padding: 0;
+				}
+
+				.date {
+					font-size: 12px;
+					line-height: 22px;
+					height: 22px;
+					border-radius: 6px;
+					color: var(--color-text-maxcontrast);
+
+					span {
+						width: auto;
+					}
+
+					&--overdue {
+						color: var(--tb-prio-high);
+						background-color: color-mix(in srgb, var(--tb-prio-high) 11%, transparent);
+						font-weight: 600;
+					}
+				}
+
+				.calendar {
+					font-size: 12px;
+					color: var(--color-text-maxcontrast);
+				}
+
+				.action-item.priority {
+					&--high {
+						color: var(--tb-prio-high);
+					}
+
+					&--medium {
+						color: var(--tb-prio-medium);
+					}
+
+					&--low {
+						color: var(--tb-prio-low);
+					}
+				}
+
+				// Actions: always visible but subdued, fully visible on hover,
+				// for the open task, with an open menu and on touch screens.
+				// (Same number of classes in all rules, so the order decides.)
+				@media (hover: hover) {
+					> .action-item {
+						opacity: var(--tb-action-opacity);
+						transition: opacity 80ms ease;
+					}
+				}
+			}
+
+			@media (hover: hover) {
+				&:hover .task-body__icons > .action-item,
+				&:focus-within .task-body__icons > .action-item,
+				&.task-item__body--active .task-body__icons > .action-item,
+				.task-body__icons > .action-item.priority,
+				.task-body__icons > .action-item.tb-followup,
+				.task-body__icons > .action-item.action-item--open {
+					opacity: 1;
+				}
+			}
+		}
+
+		&--deleted > .task-item__body .task-body__icons > .action-item {
+			opacity: 1 !important;
+		}
+
+		// "In progress" sets 1 %, an empty ring says nothing
+		> .task-item__body .task-body__icons .progress-bar--circular[aria-valuenow='1'] {
+			display: none;
+		}
+
+		// Phones: title gets the full width, tags wrap below it
+		@media only screen and (max-width: 600px) {
+			> .task-item__body {
+				height: auto;
+				min-height: 44px;
+
+				.task-body__info {
+					flex-wrap: wrap;
+					row-gap: 2px;
+					padding: 6px 0;
+
+					.summary {
+						flex-basis: 100%;
+
+						span {
+							line-height: 20px;
+							white-space: normal;
+							display: -webkit-box;
+							-webkit-line-clamp: 2;
+							-webkit-box-orient: vertical;
+						}
+					}
+
+					.tags-list {
+						max-width: 100%;
+						flex-wrap: wrap;
+					}
+				}
+			}
+		}
+
+		&--closed > .task-item__body .task-body__info {
+			opacity: .55;
+		}
+
+		// Subtasks: indented, thin guide line below the checkbox of the main task
+		> .task-item__subtasks {
+			margin-left: 39px;
+			padding-left: 0;
+			border-left: 1px solid var(--color-border);
+
+			@media only screen and (max-width: $breakpoint-mobile) {
+				margin-left: 30px;
+			}
+		}
+
+		// Number of subtasks while they are closed
+		.tb-subcount {
+			display: inline-flex;
+			align-items: center;
+			gap: 3px;
+			font-size: 12px;
+			padding: 0 6px;
+			color: var(--color-text-maxcontrast);
+		}
+
+		// Input for a new subtask
+		.task-item__input {
+			border-top: none;
+			margin: 2px 0 4px;
+
+			.input-field__input {
+				height: 34px;
+				min-height: 34px;
+				border-radius: var(--tb-radius-small) !important;
+				background-color: var(--color-background-hover);
+				font-size: 14px;
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Round checkboxes (list, board, sidebar)
+	// ---------------------------------------------------------------
+	.task-checkbox {
+		input[type='checkbox'] + label {
+			color: var(--color-text-maxcontrast);
+
+			.material-design-icon {
+				transition: transform 100ms ease, color 100ms ease;
+			}
+
+			&:hover .material-design-icon {
+				transform: scale(1.1);
+			}
+
+			&.priority--high {
+				color: var(--tb-prio-high) !important;
+			}
+
+			&.priority--medium {
+				color: var(--tb-prio-medium) !important;
+			}
+
+			&.priority--low {
+				color: var(--tb-prio-low) !important;
+			}
+		}
+
+		input[type='checkbox']:checked + label {
+			color: var(--color-primary-element) !important;
+		}
+
+		input[type='checkbox']:disabled + label {
+			opacity: .5;
+
+			&:hover .material-design-icon {
+				transform: none;
+			}
+		}
+	}
+
+	// ---------------------------------------------------------------
+	// Sidebar
+	// ---------------------------------------------------------------
+	.app-sidebar {
+		.app-sidebar-header__mainname {
+			font-size: 18px;
+			font-weight: 600;
+		}
+
+		.app-sidebar-header__subname {
+			font-size: 12px;
+		}
+
+		// Compact property rows without lines
+		.property__item {
+			border-bottom: none;
+			border-radius: var(--tb-radius-small);
+			min-height: 36px;
+			padding: 0 4px;
+			margin: 1px 0;
+
+			&:hover:not(.property__item--readonly):not(.property__item--disabled) {
+				background-color: var(--color-background-hover);
+			}
+
+			.content__icon {
+				opacity: .7;
+			}
+		}
+
+		// Selects (list, status, tags) without a frame until hovered
+		.v-select.select {
+			--vs-border-color: transparent;
+
+			&:hover,
+			&.vs--open,
+			&:focus-within {
+				--vs-border-color: var(--color-border-dark);
+			}
+		}
+
+		.app-sidebar-header__description {
+			padding: 0 6px;
+
+			.property__item {
+				border-bottom: none;
+			}
+		}
+
+		.app-sidebar-tabs__content > section,
+		.app-sidebar__tab {
+			padding: 0 6px 16px !important;
+		}
+	}
+
+	// "More fields" toggle in the sidebar
+	.tb-more-fields {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		width: 100%;
+		min-height: 32px;
+		margin: 2px 0 0;
+		padding: 0 10px;
+		border: none;
+		border-radius: var(--tb-radius-small);
+		background: transparent;
+		color: var(--color-text-maxcontrast);
+		font: inherit;
+		font-size: 13px;
+		text-align: left;
+		cursor: pointer;
+
+		&:hover {
+			background-color: var(--color-background-hover);
+			color: var(--color-main-text);
+		}
+	}
+
+	// Sidebar fields in boxes with a small title, lines between the fields
+	.tb-group {
+		position: relative;
+		// Full width also where Nextcloud lays out the fields in a row
+		flex: 1 1 100%;
+		width: 100%;
+		min-width: 0;
+		box-sizing: border-box;
+		margin: 22px 0 6px;
+		padding: 2px 4px;
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		background-color: var(--tb-group-bg);
+
+		&::before {
+			content: attr(data-title);
+			position: absolute;
+			bottom: 100%;
+			inset-inline-start: 10px;
+			padding-bottom: 3px;
+			font-size: 11px;
+			font-weight: 600;
+			letter-spacing: .04em;
+			text-transform: uppercase;
+			color: var(--color-text-maxcontrast);
+		}
+
+		// Lines between visible fields (v-show hides with an inline style)
+		> :not([style*='display: none']) ~ :not([style*='display: none']) {
+			border-top: 1px solid var(--color-border) !important;
+			border-radius: 0;
+		}
+
+		.property__item:hover:not(.property__item--readonly):not(.property__item--disabled) {
+			background-color: var(--color-background-dark);
+		}
+
+		.tb-more-fields {
+			margin: 0;
+		}
+	}
+
+	.app-sidebar-header__description .tb-group:first-child {
+		margin-top: 18px;
+	}
+
+	// Notes below the details
+	.tb-sidebar-notes {
+		margin-top: 22px;
+		padding: 4px 4px 0;
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		background-color: var(--tb-group-bg);
+
+		&__title {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin: 2px 0 0;
+			padding: 0 8px;
+			font-size: 11px;
+			font-weight: 600;
+			letter-spacing: .04em;
+			text-transform: uppercase;
+			color: var(--color-text-maxcontrast);
+		}
+
+		.tb-notes {
+			padding-top: 0;
+		}
+	}
+}
+
+// ---------------------------------------------------------------
+// List styles (view options): cards (default), rows with lines, compact
+// ---------------------------------------------------------------
+body[data-tb-list-style='cards'] .app-tasks_board .app-content .task-list .grouped-tasks > ol {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+
+	> .task-item.task-item {
+		background-color: var(--tb-card-bg);
+		border: 1px solid var(--color-border);
+		border-radius: 12px;
+		padding: 3px;
+		box-shadow: 0 1px 2px rgba(0, 0, 0, .05);
+		transition: border-color 120ms ease, box-shadow 120ms ease;
+
+		&:hover {
+			border-color: var(--color-border-dark);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+		}
+
+		&:has(> .task-item__body--active) {
+			border-color: color-mix(in srgb, var(--color-primary-element) 60%, var(--color-border));
+		}
+
+		> .task-item__subtasks {
+			margin-bottom: 2px;
+		}
+	}
+}
+
+body[data-tb-list-style='rows'] .app-tasks_board .app-content .task-list .grouped-tasks > ol {
+	background-color: var(--tb-card-bg);
+	border: 1px solid var(--color-border);
+	border-radius: 12px;
+	overflow: hidden;
+
+	&:empty {
+		display: none;
+	}
+
+	.task-item.task-item > .task-item__body {
+		border-radius: 0 !important;
+	}
+
+	> .task-item.task-item + .task-item.task-item,
+	.task-item__subtasks .task-item.task-item {
+		border-top: 1px solid var(--color-border);
+	}
+
+	.task-item.task-item > .task-item__subtasks {
+		border-top: 1px solid var(--color-border);
+		margin-left: 0;
+		padding-left: 39px;
+		border-left: none;
+		background-color: color-mix(in srgb, var(--color-background-hover) 50%, transparent);
+	}
+}
+
+// Icons in menus (menus are shown outside the app element): colour dots and
+// avatars get the same box as the normal icons, so the texts line up
+.tb-menu-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: var(--default-clickable-area);
+	height: var(--default-clickable-area);
+}
+
+// Keyboard focus on a task row (shortcuts ↑/↓, J/K)
+.app-tasks_board .app-content .task-item__body:focus-visible {
+	outline: 2px solid var(--color-primary-element);
+	outline-offset: -2px;
+}

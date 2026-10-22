@@ -58,6 +58,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					</select>
 				</li>
 			</ul>
+			<TbSettingsSection />
 		</div>
 	</NcAppNavigationSettings>
 </template>
@@ -76,9 +77,12 @@ import TrendingUp from 'vue-material-design-icons/TrendingUp.vue'
 
 import { mapState, mapGetters, mapActions } from 'vuex'
 
+import TbSettingsSection from '../../tb/components/TbSettingsSection.vue'
+
 export default {
 	components: {
 		NcAppNavigationSettings,
+		TbSettingsSection,
 		CalendarToday,
 		CalendarWeek,
 		CircleOutline,

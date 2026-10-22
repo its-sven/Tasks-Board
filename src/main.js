@@ -25,6 +25,8 @@ import App from './App.vue'
 import router from './router.js'
 import store from './store/store.js'
 import TaskBody from './components/TaskBody.vue'
+// Tasks Board: modern, compact look (styles only)
+import './tb/theme.scss'
 
 import AlertBoxOutline from 'vue-material-design-icons/AlertBoxOutline.vue'
 import CalendarRemove from 'vue-material-design-icons/CalendarRemove.vue'
@@ -64,6 +66,6 @@ const Tasks = createApp(App)
 	.provide('$appVersion', appVersion)
 	.use(router)
 	.use(store)
-	.mount('.app-tasks')
+	.mount('.app-' + appName)
 
 OCA.Tasks.App = Tasks

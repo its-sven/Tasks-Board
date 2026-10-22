@@ -27,6 +27,7 @@
 import moment from '@nextcloud/moment'
 
 import ICAL from 'ical.js'
+import { matchesAssigneeFilter, readAssignee } from '../tb/assignee.js'
 import { RecurValue } from '@nextcloud/calendar-js'
 import { randomUUID } from '../utils/crypto.js'
 import {
@@ -125,6 +126,8 @@ export default class Task {
 		this._pinned = this.vtodo.getFirstPropertyValue('x-pinned') === 'true'
 		this._location = this.vtodo.getFirstPropertyValue('location') || ''
 		this._customUrl = this.vtodo.getFirstPropertyValue('url') || ''
+		// Tasks Board: assigned person (ATTENDEE with X-NC-USERID)
+		this._tbAssignee = readAssignee(this.vtodo)
 
 		// Check for RECURRENCE-ID property (this is an exception instance)
 		this._recurrenceId = this.vtodo.getFirstPropertyValue('recurrence-id')
@@ -924,6 +927,10 @@ export default class Task {
 	 * @return {boolean} If the task matches
 	 */
 	matches(searchQuery, filter) {
+		// Tasks Board: filter by assigned person
+		if (!matchesAssigneeFilter(this, filter)) {
+			return false
+		}
 		// Check whether the filter matches
 		// Needs to match all tags
 		for (const tag of (filter?.tags || {})) {

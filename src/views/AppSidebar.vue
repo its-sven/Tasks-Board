@@ -33,50 +33,61 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 		@update:name="updateSummary"
 		@submit-name="saveSummary()"
 		@close="closeAppSidebar()">
+		<!-- Tasks Board: drag handle to change the width -->
+		<TbSidebarResizer />
 		<template v-if="task" #description>
-			<DateTimePickerItem v-show="!readOnly || task.start"
-				:date="task.startMoment"
-				:value="newStartDate"
-				:all-day="allDay"
-				:property-string="startDateString"
-				:read-only="readOnly"
-				:task="task"
-				@editing="(editing) => editingStart = editing"
-				@set-value="setStartDate">
-				<template #icon>
-					<CalendarStart :size="20" />
-				</template>
-			</DateTimePickerItem>
-			<DateTimePickerItem v-show="!readOnly || task.due"
-				:date="task.dueMoment"
-				:value="newDueDate"
-				:all-day="allDay"
-				:property-string="dueDateString"
-				:read-only="readOnly"
-				:task="task"
-				@editing="(editing) => editingDue = editing"
-				@set-value="setDueDate">
-				<template #icon>
-					<CalendarEnd :size="20" />
-				</template>
-			</DateTimePickerItem>
-			<CheckboxItem v-show="showAllDayToggle"
-				id="allDayToggle"
-				:checked="allDay"
-				:read-only="readOnly"
-				:property-string="t('tasks', 'All day')"
-				@set-checked="toggleAllDay(task)" />
-			<RecurrenceItem v-show="(task.start || task.due) && (!readOnly || task.isRecurring)"
-				:task="task"
-				:read-only="readOnly">
-				<template #icon>
-					<Repeat :size="20" />
-				</template>
-			</RecurrenceItem>
-			<CalendarPickerItem :disabled="readOnly"
-				:calendar="task.calendar"
-				:calendars="targetCalendars"
-				@change-calendar="changeCalendar" />
+			<!-- Tasks Board: fields in groups -->
+			<div v-if="!readOnly || task.start || task.due" class="tb-group tb-group--dates" :data-title="tbt('Dates')">
+				<DateTimePickerItem v-show="!readOnly || task.start"
+					:date="task.startMoment"
+					:value="newStartDate"
+					:all-day="allDay"
+					:property-string="startDateString"
+					:read-only="readOnly"
+					:task="task"
+					@editing="(editing) => editingStart = editing"
+					@set-value="setStartDate">
+					<template #icon>
+						<CalendarStart :size="20" />
+					</template>
+				</DateTimePickerItem>
+				<DateTimePickerItem v-show="!readOnly || task.due"
+					:date="task.dueMoment"
+					:value="newDueDate"
+					:all-day="allDay"
+					:property-string="dueDateString"
+					:read-only="readOnly"
+					:task="task"
+					@editing="(editing) => editingDue = editing"
+					@set-value="setDueDate">
+					<template #icon>
+						<CalendarEnd :size="20" />
+					</template>
+				</DateTimePickerItem>
+				<CheckboxItem v-show="showAllDayToggle"
+					id="allDayToggle"
+					:checked="allDay"
+					:read-only="readOnly"
+					:property-string="t('tasks', 'All day')"
+					@set-checked="toggleAllDay(task)" />
+				<RecurrenceItem v-show="(task.start || task.due) && (!readOnly || task.isRecurring)"
+					:task="task"
+					:read-only="readOnly">
+					<template #icon>
+						<Repeat :size="20" />
+					</template>
+				</RecurrenceItem>
+			</div>
+			<div class="tb-group tb-group--assignment" :data-title="tbt('Assignment')">
+				<CalendarPickerItem :disabled="readOnly"
+					:calendar="task.calendar"
+					:calendars="targetCalendars"
+					@change-calendar="changeCalendar" />
+				<!-- Tasks Board: assigned person -->
+				<TbAssigneeItem v-show="!readOnly || task._tbAssignee"
+					:task="task"
+					:read-only="readOnly" />
+			</div>
 		</template>
 
 		<template v-if="!task || (task && task.deleteCountdown === null)" #secondary-actions>
@@ -166,102 +177,131 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 				<InformationOutline :size="20" />
 			</template>
 			<div>
-				<MultiselectItem v-show="!readOnly || task.class !== 'PUBLIC'"
-					:value="classSelect.find( _ => _.type === task.class )"
-					:options="classSelect"
-					:disabled="readOnly || task.calendar.isSharedWithMe"
-					:title="task.calendar.isSharedWithMe ? t('tasks', 'Selecting a classification is forbidden, because the task was shared with you.') : null"
-					:placeholder="t('tasks', 'Select a classification')"
-					icon="IconEye"
-					@change-value="changeClass" />
-				<MultiselectItem v-show="!readOnly || task.status"
-					:value="statusOptions.find( _ => _.type === task.status )"
-					:options="statusOptions"
-					:disabled="readOnly"
-					:placeholder="t('tasks', 'Select a status')"
-					icon="IconPulse"
-					@change-value="changeStatus" />
-				<DateTimePickerItem v-show="task.completed"
-					:date="task.completedDateMoment"
-					:value="newCompletedDate"
-					:property-string="completedString"
-					:read-only="readOnly"
-					:task="task"
-					:check-overdue="false"
-					@set-value="changeCompletedDate">
-					<template #icon>
-						<CalendarCheck :size="20" />
-					</template>
-				</DateTimePickerItem>
-				<SliderItem v-show="!readOnly || task.priority"
-					:value="task.priority"
-					:property-string="priorityString"
-					:read-only="readOnly"
-					:min-value="0"
-					:max-value="9"
-					:color="priorityColor"
-					:task="task"
-					@set-value="({task, value}) => setPriority({ task, priority: value })">
-					<template #icon>
-						<Star :size="20" />
-					</template>
-				</SliderItem>
-				<SliderItem v-show="!readOnly || task.complete"
-					:value="task.complete"
-					:property-string="completeString"
-					:read-only="readOnly"
-					:min-value="0"
-					:max-value="100"
-					:color="task.complete > 0 ? '#4271a6' : null"
-					:task="task"
-					@set-value="({task, value}) => setPercentComplete({ task, complete: value })">
-					<template #icon>
-						<Percent :size="20" />
-					</template>
-				</SliderItem>
-				<TextItem v-show="!readOnly || task.location"
-					:value="task.location"
-					:property-string="task.location || t('tasks', 'Set a location')"
-					:read-only="readOnly"
-					:color="task.location ? '#4271a6' : null"
-					:task="task"
-					@set-value="({task, value}) => setLocation({ task, location: value })">
-					<template #icon>
-						<MapMarker :size="20" />
-					</template>
-				</TextItem>
-				<TextItem v-show="!readOnly || task.customUrl"
-					:value="task.customUrl"
-					:property-string="task.customUrl || t('tasks', 'Set a URL')"
-					:read-only="readOnly"
-					:color="task.customUrl ? '#4271a6' : null"
-					:task="task"
-					@set-value="({task, value}) => setUrl({ task, url: value })">
-					<template #icon>
-						<Web :size="20" />
-					</template>
-				</TextItem>
-				<TagsItem v-show="!readOnly || task.tags.length > 0"
-					:options="tags"
-					:tags="task.tags"
-					:disabled="readOnly"
-					:placeholder="t('tasks', 'Select tags')"
-					icon="TagMultiple"
-					@add-tag="updateTag"
-					@set-tags="updateTags" />
-				<AlarmList :alarms="alarms"
-					:start-date="task.start"
-					:due-date="task.due"
-					:all-day="allDay"
-					:read-only="readOnly"
-					@add-alarm="addAlarmItem"
-					@update-alarm="updateAlarmItem"
-					@remove-alarm="removeAlarmItem"
-					@restore-date="restoreDate">
-					<template #icon>
-						<Bell :size="20" />
-					</template>
-				</AlarmList>
+				<!-- Tasks Board: fields in groups, rarely used ones under "More fields" -->
+				<div v-if="!readOnly || task.status || task.priority || task.complete || task.completed" class="tb-group tb-group--status" :data-title="tbt('Status')">
+					<MultiselectItem v-show="!readOnly || task.status"
+						:value="statusOptions.find( _ => _.type === task.status )"
+						:options="statusOptions"
+						:disabled="readOnly"
+						:placeholder="t('tasks', 'Select a status')"
+						icon="IconPulse"
+						@change-value="changeStatus" />
+					<DateTimePickerItem v-show="task.completed"
+						:date="task.completedDateMoment"
+						:value="newCompletedDate"
+						:property-string="completedString"
+						:read-only="readOnly"
+						:task="task"
+						:check-overdue="false"
+						@set-value="changeCompletedDate">
+						<template #icon>
+							<CalendarCheck :size="20" />
+						</template>
+					</DateTimePickerItem>
+					<SliderItem v-show="!readOnly || task.priority"
+						:value="task.priority"
+						:property-string="priorityString"
+						:read-only="readOnly"
+						:min-value="0"
+						:max-value="9"
+						:color="priorityColor"
+						:task="task"
+						@set-value="({task, value}) => setPriority({ task, priority: value })">
+						<template #icon>
+							<Star :size="20" />
+						</template>
+					</SliderItem>
+					<SliderItem v-show="!readOnly || task.complete"
+						:value="task.complete"
+						:property-string="completeString"
+						:read-only="readOnly"
+						:min-value="0"
+						:max-value="100"
+						:color="task.complete > 0 ? '#4271a6' : null"
+						:task="task"
+						@set-value="({task, value}) => setPercentComplete({ task, complete: value })">
+						<template #icon>
+							<Percent :size="20" />
+						</template>
+					</SliderItem>
+				</div>
+				<div v-if="!readOnly || task.tags.length > 0" class="tb-group tb-group--tags" :data-title="tbt('Tags')">
+					<TagsItem v-show="!readOnly || task.tags.length > 0"
+						:options="tags"
+						:tags="task.tags"
+						:disabled="readOnly"
+						:placeholder="t('tasks', 'Select tags')"
+						icon="TagMultiple"
+						@add-tag="updateTag"
+						@set-tags="updateTags" />
+					<TbTagListHint :task="task" :read-only="readOnly" />
+				</div>
+				<div class="tb-group tb-group--alarms" :data-title="tbt('Reminders')">
+					<AlarmList :alarms="alarms"
+						:start-date="task.start"
+						:due-date="task.due"
+						:all-day="allDay"
+						:read-only="readOnly"
+						@add-alarm="addAlarmItem"
+						@update-alarm="updateAlarmItem"
+						@remove-alarm="removeAlarmItem"
+						@restore-date="restoreDate">
+						<template #icon>
+							<Bell :size="20" />
+						</template>
+					</AlarmList>
+				</div>
+				<div v-if="(!readOnly && hiddenFieldCount) || task.class !== 'PUBLIC' || task.location || task.customUrl" class="tb-group tb-group--more" :data-title="tbt('More fields')">
+					<MultiselectItem v-show="task.class !== 'PUBLIC' || (!readOnly && tbMoreFields)"
+						:value="classSelect.find( _ => _.type === task.class )"
+						:options="classSelect"
+						:disabled="readOnly || task.calendar.isSharedWithMe"
+						:title="task.calendar.isSharedWithMe ? t('tasks', 'Selecting a classification is forbidden, because the task was shared with you.') : null"
+						:placeholder="t('tasks', 'Select a classification')"
+						icon="IconEye"
+						@change-value="changeClass" />
+					<TextItem v-show="task.location || (!readOnly && tbMoreFields)"
+						:value="task.location"
+						:property-string="task.location || t('tasks', 'Set a location')"
+						:read-only="readOnly"
+						:color="task.location ? '#4271a6' : null"
+						:task="task"
+						@set-value="({task, value}) => setLocation({ task, location: value })">
+						<template #icon>
+							<MapMarker :size="20" />
+						</template>
+					</TextItem>
+					<TextItem v-show="task.customUrl || (!readOnly && tbMoreFields)"
+						:value="task.customUrl"
+						:property-string="task.customUrl || t('tasks', 'Set a URL')"
+						:read-only="readOnly"
+						:color="task.customUrl ? '#4271a6' : null"
+						:task="task"
+						@set-value="({task, value}) => setUrl({ task, url: value })">
+						<template #icon>
+							<Web :size="20" />
+						</template>
+					</TextItem>
+					<button v-if="!readOnly && hiddenFieldCount"
+						type="button"
+						class="tb-more-fields"
+						@click="tbMoreFields = !tbMoreFields">
+						<ChevronDown v-if="!tbMoreFields" :size="18" />
+						<ChevronUp v-else :size="18" />
+						{{ tbMoreFields ? tbt('Fewer fields') : tbt('More fields (visibility, location, URL)') }}
+					</button>
+				</div>
+				<!-- Tasks Board: notes always below the details instead of a separate tab -->
+				<section v-if="!readOnly || task.note" id="tb-sidebar-notes" class="tb-sidebar-notes">
+					<h3 class="tb-sidebar-notes__title">
+						<TextBoxOutline :size="18" />
+						{{ t('tasks', 'Notes') }}
+					</h3>
+					<NotesItem :value="task.note"
+						:read-only="readOnly"
+						:task="task"
+						@set-value="({task, value}) => setNote({ task, note: value })" />
+				</section>
 			</div>
 		</NcAppSidebarTab>
 		<NcEmptyContent v-else :description="taskStatusLabel">
@@ -270,20 +310,6 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 				<Magnify v-else />
 			</template>
 		</NcEmptyContent>
-		<NcAppSidebarTab v-if="task && (!readOnly || task.note)"
-			id="app-sidebar-tab-notes"
-			class="app-sidebar-tab"
-			:name="t('tasks', 'Notes')"
-			:order="1">
-			<template #icon>
-				<TextBoxOutline :size="20" />
-			</template>
-			<NotesItem v-show="!readOnly || task.note"
-				:value="task.note"
-				:read-only="readOnly"
-				:task="task"
-				@set-value="({task, value}) => setNote({ task, note: value })" />
-		</NcAppSidebarTab>
 	</NcAppSidebar>
 </template>
 
@@ -297,7 +323,12 @@ import RecurrenceItem from '../components/AppSidebar/RecurrenceItem.vue'
 import SliderItem from '../components/AppSidebar/SliderItem.vue'
 import TagsItem from '../components/AppSidebar/TagsItem.vue'
 import TextItem from '../components/AppSidebar/TextItem.vue'
-import NotesItem from '../components/AppSidebar/NotesItem.vue'
+import NotesItem from '../tb/components/TbNotesItem.vue'
+import TbAssigneeItem from '../tb/components/TbAssigneeItem.vue'
+import TbSidebarResizer from '../tb/components/TbSidebarResizer.vue'
+import TbTagListHint from '../tb/components/TbTagListHint.vue'
+import { tbt } from '../tb/l10n.js'
+import { tagOptions } from '../tb/taglist.js'
 import TaskCheckbox from '../components/TaskCheckbox.vue'
 import { mapICALAlarmsToAlarmObjects } from '../models/alarm.js'
 import Task from '../models/task.js'
@@ -331,6 +362,8 @@ import Pin from 'vue-material-design-icons/PinOutline.vue'
 import PinOff from 'vue-material-design-icons/PinOffOutline.vue'
 import Star from 'vue-material-design-icons/StarOutline.vue'
 import TextBoxOutline from 'vue-material-design-icons/TextBoxOutline.vue'
+import ChevronDown from 'vue-material-design-icons/ChevronDown.vue'
+import ChevronUp from 'vue-material-design-icons/ChevronUp.vue'
 import Repeat from 'vue-material-design-icons/Repeat.vue'
 import Undo from 'vue-material-design-icons/Undo.vue'
 import Web from 'vue-material-design-icons/Web.vue'
@@ -350,6 +383,8 @@ export default {
 		RecurrenceItem,
 		Bell,
 		Calendar,
+		ChevronDown,
+		ChevronUp,
 		CalendarEnd,
 		CalendarStart,
 		CalendarCheck,
@@ -375,6 +410,9 @@ export default {
 		TextItem,
 		CalendarPickerItem,
 		NotesItem,
+		TbAssigneeItem,
+		TbSidebarResizer,
+		TbTagListHint,
 		TaskCheckbox,
 	},
 	/**
@@ -421,10 +459,18 @@ export default {
 			],
 			newSummary: '',
 			summarySaved: true,
-			activeTab: this.active,
+			activeTab: this.active === 'app-sidebar-tab-notes' ? 'app-sidebar-tab-details' : this.active,
+			tbMoreFields: false,
 		}
 	},
 	computed: {
+		/** Tasks Board: number of empty, rarely used fields behind "More fields" */
+		hiddenFieldCount() {
+			if (!this.task) {
+				return 0
+			}
+			return [this.task.class === 'PUBLIC', !this.task.location, !this.task.customUrl].filter(Boolean).length
+		},
 		calendar() {
 			return this.getCalendarByRoute(this.$route)
 		},
@@ -663,14 +709,15 @@ export default {
 			return !this.readOnly && (this.task.due || this.task.start || this.editingStart || this.editingDue)
 		},
 		priorityColor() {
+			// Tasks Board: same colours as list and board (the upstream yellow is hard to read)
 			if (+this.task.priority > 5) {
-				return '#4271a6'
+				return '#3d7bd9'
 			}
 			if (+this.task.priority === 5) {
-				return '#fd0'
+				return '#e09b13'
 			}
 			if (+this.task.priority > 0) {
-				return '#b3312d'
+				return '#d1453b'
 			}
 			return null
 		},
@@ -710,12 +757,20 @@ export default {
 			}
 			return calendars
 		},
+		/**
+		 * Tasks Board: tags to choose from, the fixed tag list first
+		 *
+		 * @return {string[]}
+		 */
+		tags() {
+			return tagOptions(this.$store.getters.tbTagList, this.tbUsedTags)
+		},
 		...mapGetters({
 			writableCalendars: 'getSortedWritableCalendars',
 			getTaskByRoute: 'getTaskByRoute',
 			getCalendarByRoute: 'getCalendarByRoute',
 			calendars: 'getSortedCalendars',
-			tags: 'tags',
+			tbUsedTags: 'tags',
 			showTaskInCalendar: 'showTaskInCalendar',
 			calendarView: 'calendarView',
 		}),
@@ -743,6 +798,7 @@ export default {
 	methods: {
 		t,
 		n,
+		tbt,
 
 		...mapActions([
 			'scheduleTaskDeletion',
@@ -804,7 +860,10 @@ export default {
 
 		closeAppSidebar() {
 			this.saveSummary()
-			if (this.$route.params.calendarId) {
+			// Tasks Board: the dashboard opens tasks in the sidebar too
+			if (this.$route.name === 'dashboardTask') {
+				this.$router.push({ name: 'dashboard' })
+			} else if (this.$route.params.calendarId) {
 				this.$router.push({ name: 'calendars', params: { calendarId: this.$route.params.calendarId } })
 			} else {
 				this.$router.push({ name: 'collections', params: { collectionId: this.$route.params.collectionId } })
@@ -812,6 +871,12 @@ export default {
 		},
 
 		openAppSidebarTab(tab) {
+			// Tasks Board: the notes are part of the details tab
+			if (tab === 'app-sidebar-tab-notes') {
+				this.activeTab = 'app-sidebar-tab-details'
+				this.$nextTick(() => document.getElementById('tb-sidebar-notes')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }))
+				return
+			}
 			this.activeTab = tab
 		},
 
@@ -970,7 +1035,10 @@ export default {
 		async changeCalendar(calendar) {
 			const task = await this.moveTask({ task: this.task, calendar })
 			// If we are in a calendar view, we have to navigate to the new calendar.
-			if (this.$route.params.calendarId) {
+			if (this.$route.name === 'dashboardTask') {
+				// Tasks Board: dashboard
+				this.$router.push({ name: 'dashboardTask', params: { calendarId: task.calendar.id, taskId: task.uri } })
+			} else if (this.$route.params.calendarId) {
 				this.$router.push({ name: 'calendarsTask', params: { calendarId: task.calendar.id, taskId: task.uri } })
 			}
 		},
@@ -993,7 +1061,7 @@ export default {
 			}
 
 			&-tabs {
-				min-height: 160px !important;
+				min-height: 120px !important;
 
 				&__content {
 					display: flex;

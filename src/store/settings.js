@@ -24,6 +24,8 @@
 'use strict'
 
 import Requests from '../services/requests.js'
+import { parseViews } from '../tb/board.js'
+import { parsePrefs } from '../tb/progress.js'
 
 import { loadState } from '@nextcloud/initial-state'
 import { generateUrl } from '@nextcloud/router'
@@ -38,19 +40,26 @@ const state = {
 const getters = {
 	/**
 	 * Returns the sort order how to sort tasks
+	 * Tasks Board: the current list may have its own sort order
 	 *
 	 * @param {object} state The store data
+	 * @param {object} getters The getters
+	 * @param {object} rootState The root state
+	 * @param {object} rootGetters The root getters
 	 * @return {string} The sort order
 	 */
-	sortOrder: (state) => state.settings.sortOrder,
+	sortOrder: (state, getters, rootState, rootGetters) => rootGetters.tbSortOrder ?? state.settings.sortOrder,
 
 	/**
 	 * Returns the sort direction how to sort tasks
 	 *
 	 * @param {object} state The store data
+	 * @param {object} getters The getters
+	 * @param {object} rootState The root state
+	 * @param {object} rootGetters The root getters
 	 * @return {string} The sort direction
 	 */
-	sortDirection: (state) => state.settings.sortDirection,
+	sortDirection: (state, getters, rootState, rootGetters) => rootGetters.tbSortDirection ?? state.settings.sortDirection,
 
 	/**
 	 * Returns if all-day is default
@@ -118,7 +127,7 @@ const actions = {
 	setSetting(context, payload) {
 		context.commit('setSetting', payload)
 		return new Promise(function() {
-			Requests.post(generateUrl('apps/tasks/api/v1/settings/{type}', payload), { value: payload.value })
+			Requests.post(generateUrl('apps/' + appName + '/api/v1/settings/{type}', payload), { value: payload.value })
 		})
 	},
 
@@ -130,15 +139,17 @@ const actions = {
 	 */
 	loadSettings({ commit }) {
 		commit('setSettings', {
-			defaultCalendarId: loadState('tasks', 'defaultCalendarId'),
-			showHidden: loadState('tasks', 'showHidden'),
-			sortOrder: loadState('tasks', 'sortOrder'),
-			sortDirection: loadState('tasks', 'sortDirection'),
-			allDay: loadState('tasks', 'allDay'),
-			initialRoute: loadState('tasks', 'initialRoute'),
-			calendarEnabled: loadState('tasks', 'calendarEnabled'),
-			showTasks: loadState('tasks', 'showTasks'),
-			calendarView: loadState('tasks', 'calendarView'),
+			defaultCalendarId: loadState(appName, 'defaultCalendarId'),
+			showHidden: loadState(appName, 'showHidden'),
+			sortOrder: loadState(appName, 'sortOrder'),
+			sortDirection: loadState(appName, 'sortDirection'),
+			allDay: loadState(appName, 'allDay'),
+			initialRoute: loadState(appName, 'initialRoute'),
+			calendarEnabled: loadState(appName, 'calendarEnabled'),
+			showTasks: loadState(appName, 'showTasks'),
+			calendarView: loadState(appName, 'calendarView'),
+			tbViews: parseViews(loadState(appName, 'tbViews', '{}')),
+			tbPrefs: parsePrefs(loadState(appName, 'tbPrefs', '{}')),
 		})
 	},
 }

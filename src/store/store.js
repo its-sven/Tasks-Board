@@ -26,6 +26,12 @@ import collections from './collections.js'
 import tasks from './tasks.js'
 import settings from './settings.js'
 import principals from './principals.js'
+import tbBoard, { tbUiPlugin } from '../tb/store/board.js'
+import tbAssignment, { tbAssignmentPlugin } from '../tb/store/assignment.js'
+import tbSelection from '../tb/store/selection.js'
+import tbTagList from '../tb/store/taglist.js'
+import tbTemplates, { tbTemplatesPlugin } from '../tb/store/templates.js'
+import { tbProgressPlugin } from '../tb/progress.js'
 
 import { createStore } from 'vuex'
 
@@ -36,5 +42,11 @@ export default createStore({
 		tasks,
 		settings,
 		principals,
+		tbBoard,
+		tbAssignment,
+		tbSelection,
+		tbTagList,
+		tbTemplates,
 	},
+	plugins: [tbProgressPlugin, tbAssignmentPlugin, tbUiPlugin, tbTemplatesPlugin],
 })

@@ -37,7 +37,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 
 <script>
 import Task from '../models/task.js'
-import { sort } from '../store/storeHelper.js'
+import { sort } from '../tb/sort.js'
 
 import { Sortable } from 'sortablejs-vue3'
 import { mapGetters, mapActions, mapMutations } from 'vuex'
@@ -65,9 +65,18 @@ export default {
 		...mapGetters({
 			getCalendar: 'getCalendarById',
 			getTask: 'getTaskByUri',
-			sortOrder: 'sortOrder',
-			sortDirection: 'sortDirection',
+			listSortOrder: 'sortOrder',
+			listSortDirection: 'sortDirection',
+			tbSubtaskOrder: 'tbSubtaskOrder',
 		}),
+
+		// Tasks Board: subtasks (container with task-id) can have their own sort order
+		sortOrder() {
+			return this.$attrs['task-id'] && this.tbSubtaskOrder !== 'inherit' ? this.tbSubtaskOrder : this.listSortOrder
+		},
+		sortDirection() {
+			return this.$attrs['task-id'] && this.tbSubtaskOrder !== 'inherit' ? false : this.listSortDirection
+		},
 
 		sortedTasks() {
 			return sort([...this.tasks], this.sortOrder, this.sortDirection)

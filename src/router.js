@@ -22,8 +22,9 @@
 
 import { getInitialRoute } from './utils/router.js'
 import AppSidebar from './views/AppSidebar.vue'
-import Calendar from './views/AppContent/Calendar.vue'
-import Collections from './views/AppContent/Collections.vue'
+import Calendar from './tb/views/TbCalendarView.vue'
+import Collections from './tb/views/TbCollectionsView.vue'
+import TbDashboard from './tb/views/TbDashboard.vue'
 
 import { getRootUrl, generateUrl } from '@nextcloud/router'
 
@@ -32,7 +33,7 @@ import { createWebHistory, createRouter, RouterView } from 'vue-router'
 
 const webRootWithIndexPHP = getRootUrl() + '/index.php'
 const doesURLContainIndexPHP = window.location.pathname.startsWith(webRootWithIndexPHP)
-const base = generateUrl('apps/tasks', {}, {
+const base = generateUrl('apps/' + appName, {}, {
 	noRewrite: doesURLContainIndexPHP,
 })
 
@@ -83,6 +84,27 @@ const routes = [
 				path: '/calendars/:calendarId/tasks/:taskId',
 				components: { default: Calendar, AppSidebar },
 				props: { default: true, AppSidebar: true },
+			},
+		],
+	},
+	// Tasks Board: dashboard, tasks open in the sidebar
+	{
+		path: '/dashboard',
+		components: {
+			default: { render: () => h(RouterView, { name: 'default' }) },
+			AppSidebar: { render: () => h(RouterView, { name: 'AppSidebar' }) },
+		},
+		children: [
+			{
+				name: 'dashboard',
+				path: '/dashboard',
+				component: TbDashboard,
+			},
+			{
+				name: 'dashboardTask',
+				path: '/dashboard/:calendarId/tasks/:taskId',
+				components: { default: TbDashboard, AppSidebar },
+				props: { default: false, AppSidebar: true },
 			},
 		],
 	},

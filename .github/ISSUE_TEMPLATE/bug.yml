@@ -5,19 +5,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        ### 👍Thanks for reporting issues back to Nextcloud! 
-        This is the issue tracker of Nextcloud, if you have any support question please check out [the support on our website](https://nextcloud.com/support).
-        
-        This is the bug tracker for the web-tasks component. Find other components [in our Github Organisation](https://github.com/nextcloud/)
-        Everything that is related to the CalDAV server, meaning it does not only affect the web-tasks but also your mobile and desktop clients, belongs in [the Server repository](https://github.com/nextcloud/server).
-        
-        For reporting potential security issues please see [the security page on our website](https://nextcloud.com/security/).
-        
-        To make it possible for us to help you please fill out below information carefully. 
-        
-        If you are a customer, please submit your issue directly in [the Nextcloud Portal](https://portal.nextcloud.com) so it gets resolved more quickly by our dedicated engineers.
-        
-        Note that Nextcloud is an open source project backed by Nextcloud GmbH. Most of our volunteers are home users and thus primarily care about issues that affect home users. Our paid engineers prioritize issues of our customers. If you are neither a home user nor a customer, consider paying somebody to fix your issue, do it yourself or become a customer.
+        ### 👍 Thanks for reporting a bug in Tasks Board!
+        Tasks Board is a fork of [Nextcloud Tasks](https://github.com/nextcloud/tasks). If the problem also occurs in the Tasks app, please report it [there](https://github.com/nextcloud/tasks/issues).
+        Everything that is related to the CalDAV server, meaning it does not only affect the web app but also your mobile and desktop clients, belongs in [the Nextcloud server repository](https://github.com/nextcloud/server).
+
+        Please do not report security issues here. Report them privately on GitHub instead (tab "Security" → "Report a vulnerability").
+
+        To make it possible to help you, please fill out the information below carefully.
   - type: textarea
     id: reproduce
     attributes:
@@ -48,13 +42,13 @@ body:
       required: true
   - type: markdown
     attributes:
-      value: "## Tasks app"
+      value: "## Tasks Board"
   - type: input
     id: tasks-app-version
     attributes:
-      label: Tasks app version
+      label: Tasks Board version
       description: |
-        See apps admin page, e.g. 0.15.0
+        See apps admin page, e.g. 1.0.0
   - type: input
     id: CalDAV-clients-used
     attributes:

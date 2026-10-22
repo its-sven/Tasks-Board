@@ -40,7 +40,7 @@ window.addEventListener('DOMContentLoaded', () => {
 	}
 
 	window.OCA.Talk.registerMessageAction({
-		label: t('tasks', 'Create a task'),
+		label: t('tasks', 'Create a task') + ' (Tasks Board)',
 		icon: 'icon-tasks',
 		async callback({ message: { message, messageParameters, actorDisplayName }, metadata: { name: conversationName, token: conversationToken } }) {
 			const parsedMessage = message.replace(/{[a-z0-9-_]+}/gi, function(parameter) {

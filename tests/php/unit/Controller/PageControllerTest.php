@@ -9,9 +9,9 @@
  * @copyright Hendrik Leppelsack 2015
  */
 
-namespace OCA\Tasks\Controller;
+namespace OCA\TasksBoard\Controller;
 
-use OCA\Tasks\Service\SettingsService;
+use OCA\TasksBoard\Service\SettingsService;
 use OCP\AppFramework\Http\TemplateResponse;
 use PHPUnit\Framework\TestCase as Base;
 

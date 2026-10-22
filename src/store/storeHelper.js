@@ -30,6 +30,23 @@ import Task from '../models/task.js'
 import moment from '@nextcloud/moment'
 
 import ICAL from 'ical.js'
+import { isAssignedTo } from '../tb/assignee.js'
+import { isTemplateCalendar } from '../tb/templates.js'
+import { isFollowUpDue, isTaskWaiting } from '../tb/waiting.js'
+import { getCurrentUser } from '@nextcloud/auth'
+
+/**
+ * Tasks Board: whether the task is assigned to the current user
+ *
+ * @param {object} task The task
+ * @return {boolean}
+ */
+function isTaskAssignedToMe(task) {
+	return isAssignedTo(task, getCurrentUser()?.uid)
+}
+
+/** Tasks Board: ids of the collections (everything else is a list) */
+const COLLECTION_IDS = ['completed', 'all', 'current', 'starred', 'assigned', 'waiting', 'followup', 'today', 'week']
 
 /**
  * Returns if a task belongs to a list
@@ -43,6 +60,10 @@ function isTaskInList(task, listId, checkSubtasks = true) {
 	const parts = listId.split('-')
 	listId = parts[0]
 	const day = parts[1] ? parts[1] : null
+	// Tasks Board: tasks of the template list are only shown in the list itself
+	if (COLLECTION_IDS.includes(listId) && isTemplateCalendar(task.calendar)) {
+		return false
+	}
 	switch (listId) {
 	case 'completed':
 		return task.closed
@@ -52,6 +73,14 @@ function isTaskInList(task, listId, checkSubtasks = true) {
 		return !task.closed && testTask(task, isTaskCurrent, checkSubtasks)
 	case 'starred':
 		return !task.closed && testTask(task, isTaskPriority, checkSubtasks)
+	// Tasks Board: tasks assigned to the current user
+	case 'assigned':
+		return !task.closed && testTask(task, isTaskAssignedToMe, checkSubtasks)
+	// Tasks Board: waiting tasks and follow-ups that are due
+	case 'waiting':
+		return !task.closed && testTask(task, (task) => isTaskWaiting(task), checkSubtasks)
+	case 'followup':
+		return !task.closed && testTask(task, (task) => isFollowUpDue(task), checkSubtasks)
 	case 'today':
 		return !task.closed && testTask(task, isTaskToday, checkSubtasks)
 	case 'week':

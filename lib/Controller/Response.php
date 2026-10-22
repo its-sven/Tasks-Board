@@ -20,7 +20,7 @@
  *
  */
 
-namespace OCA\Tasks\Controller;
+namespace OCA\TasksBoard\Controller;
 
 use \Closure;
 use \OCP\AppFramework\Http\JSONResponse;

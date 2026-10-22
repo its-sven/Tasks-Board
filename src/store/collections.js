@@ -55,7 +55,7 @@ const getters = {
 				let tasks = Object.values(calendar.tasks).filter(task => {
 					return isTaskInList(task, collectionId, false)
 				})
-				if (rootState.tasks.searchQuery || rootState.tasks.filter.tags.length) {
+				if (rootState.tasks.searchQuery || rootState.tasks.filter.tags.length || rootState.tasks.filter.tbAssignees?.length) {
 					tasks = tasks.filter(task => {
 						if (task.matches(rootState.tasks.searchQuery, rootState.tasks.filter)) {
 							return true
@@ -103,7 +103,7 @@ const actions = {
 	 */
 	loadCollections({ commit }) {
 		return new Promise(function(resolve) {
-			Requests.get(generateUrl('apps/tasks/api/v1/collections'))
+			Requests.get(generateUrl('apps/' + appName + '/api/v1/collections'))
 				.then(response => {
 					commit('setCollections', {
 						collections: response.data.data.collections,
@@ -123,7 +123,7 @@ const actions = {
 	setVisibility(context, collection) {
 		context.commit('setVisibility', collection)
 		return new Promise(function() {
-			Requests.post(generateUrl('apps/tasks/api/v1/collection/{id}/visibility/{show}', collection), {})
+			Requests.post(generateUrl('apps/' + appName + '/api/v1/collection/{id}/visibility/{show}', collection), {})
 		})
 	},
 }

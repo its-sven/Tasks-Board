@@ -30,10 +30,11 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 			:aria-label="ariaLabel"
 			@click="toggleCompleted()">
 		<label :class="[priorityClass]" :for="checkboxId">
-			<CheckboxBlankOffOutline v-if="cancelled && !completed" :size="22" />
-			<CheckboxOutline v-else-if="completed" :size="22" />
-			<CheckboxBlank v-else-if="readOnly" :size="22" />
-			<CheckboxBlankOutline v-else :size="22" />
+			<!-- Tasks Board: round checkboxes -->
+			<CheckboxBlankOffOutline v-if="cancelled && !completed" :size="20" />
+			<CheckboxOutline v-else-if="completed" :size="20" />
+			<CheckboxBlank v-else-if="readOnly" :size="20" />
+			<CheckboxBlankOutline v-else :size="20" />
 		</label>
 	</div>
 </template>
@@ -41,10 +42,11 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 <script>
 import { translate as t } from '@nextcloud/l10n'
 
-import CheckboxBlank from 'vue-material-design-icons/CheckboxBlank.vue'
-import CheckboxBlankOffOutline from 'vue-material-design-icons/CheckboxBlankOffOutline.vue'
-import CheckboxBlankOutline from 'vue-material-design-icons/CheckboxBlankOutline.vue'
-import CheckboxOutline from 'vue-material-design-icons/CheckboxOutline.vue'
+// Tasks Board: round icons, the names stay so upstream changes still apply
+import CheckboxBlank from 'vue-material-design-icons/CheckboxBlankCircleOutline.vue'
+import CheckboxBlankOffOutline from 'vue-material-design-icons/CloseCircleOutline.vue'
+import CheckboxBlankOutline from 'vue-material-design-icons/CircleOutline.vue'
+import CheckboxOutline from 'vue-material-design-icons/CheckCircle.vue'
 
 export default {
 	components: {

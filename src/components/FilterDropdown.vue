@@ -43,6 +43,21 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 			</template>
 			{{ t('tasks', 'Select tags to filter by') }}
 		</NcActionInput>
+		<!-- Tasks Board: filter by assigned person -->
+		<template v-if="tbPeople.length">
+			<NcActionCaption :name="tbt('Filter by person')" />
+			<NcActionCheckbox v-for="person in tbPeople"
+				:key="person.uid"
+				:model-value="tbIsSelected(person.uid)"
+				@update:model-value="tbTogglePerson(person.uid, $event)">
+				{{ person.displayName }}
+			</NcActionCheckbox>
+			<NcActionCheckbox :model-value="tbIsSelected(tbUnassigned)"
+				@update:model-value="tbTogglePerson(tbUnassigned, $event)">
+				{{ tbt('Not assigned') }}
+			</NcActionCheckbox>
+			<NcActionSeparator />
+		</template>
 		<NcActionButton class="reactive"
 			:close-after-click="true"
 			@click="resetFilter">
@@ -59,6 +74,11 @@ import { translate as t } from '@nextcloud/l10n'
 import NcActions from '@nextcloud/vue/components/NcActions'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActionInput from '@nextcloud/vue/components/NcActionInput'
+import NcActionCaption from '@nextcloud/vue/components/NcActionCaption'
+import NcActionCheckbox from '@nextcloud/vue/components/NcActionCheckbox'
+import NcActionSeparator from '@nextcloud/vue/components/NcActionSeparator'
+import { peopleOf, UNASSIGNED } from '../tb/assignee.js'
+import { tbt } from '../tb/l10n.js'
 
 import Close from 'vue-material-design-icons/Close.vue'
 import FilterIcon from 'vue-material-design-icons/FilterOutline.vue'
@@ -73,6 +93,9 @@ export default {
 		NcActions,
 		NcActionButton,
 		NcActionInput,
+		NcActionCaption,
+		NcActionCheckbox,
+		NcActionSeparator,
 		Close,
 		FilterIcon,
 		FilterOffIcon,
@@ -85,7 +108,18 @@ export default {
 			searchQuery: 'searchQuery',
 		}),
 		isFilterActive() {
-			return this.filter.tags.length || this.searchQuery
+			return this.filter.tags.length || this.searchQuery || this.filter.tbAssignees?.length
+		},
+		/** Tasks Board: persons that have tasks assigned in the loaded lists */
+		tbPeople() {
+			const tasks = []
+			for (const calendar of this.$store.getters.getSortedCalendars) {
+				tasks.push(...Object.values(calendar.tasks))
+			}
+			return peopleOf(tasks)
+		},
+		tbUnassigned() {
+			return UNASSIGNED
 		},
 	},
 	methods: {
@@ -98,8 +132,17 @@ export default {
 			this.setFilter(filter)
 		},
 
+		tbt,
+		tbIsSelected(uid) {
+			return (this.filter.tbAssignees || []).includes(uid)
+		},
+		tbTogglePerson(uid, selected) {
+			const current = (this.filter.tbAssignees || []).filter(value => value !== uid)
+			this.setFilter({ ...this.filter, tbAssignees: selected ? [...current, uid] : current })
+		},
+
 		resetFilter() {
-			this.setFilter({ tags: [] })
+			this.setFilter({ tags: [], tbAssignees: [] })
 			this.setSearchQuery('')
 		},
 	},
