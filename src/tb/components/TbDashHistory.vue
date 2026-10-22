@@ -87,6 +87,7 @@ Can be shown as a table instead.
 </template>
 
 <script>
+import { shortDate } from '../dates.js'
 import { niceMax } from '../stats.js'
 
 export default {
@@ -137,7 +138,7 @@ export default {
 			return this.weekPrefix + ' ' + week.week
 		},
 		range(week) {
-			return week.start.format('DD.MM.') + '–' + week.start.clone().add(6, 'days').format('DD.MM.')
+			return shortDate(week.start) + '–' + shortDate(week.start.clone().add(6, 'days'))
 		},
 	},
 }

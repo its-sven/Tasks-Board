@@ -187,6 +187,7 @@ person and due date can be changed directly in the cell.
 <script>
 import TaskCheckbox from '../../components/TaskCheckbox.vue'
 import { boardColumn, collectBoardTasks, parentTask, priorityGroup } from '../board.js'
+import { shortDate } from '../dates.js'
 import { tbt } from '../l10n.js'
 import { sort as tbSort } from '../sort.js'
 import { assigneeOf } from '../assignee.js'
@@ -429,7 +430,7 @@ export default {
 			return { done: subTasks.filter(sub => sub.completed).length, total: subTasks.length }
 		},
 		formatDate(value) {
-			return value && value.isValid() ? value.format('DD.MM.YY') : ''
+			return shortDate(value, true)
 		},
 		isoDate(value) {
 			return value && value.isValid() ? value.format('YYYY-MM-DD') : ''

@@ -54,6 +54,11 @@ Tasks Board ist ein unabhängiges Projekt und gehört nicht zur Nextcloud GmbH.]
     <website>https://github.com/its-sven/Tasks-Board</website>
     <bugs>https://github.com/its-sven/Tasks-Board/issues</bugs>
     <repository>https://github.com/its-sven/Tasks-Board.git</repository>
+    <screenshot>https://raw.githubusercontent.com/its-sven/Tasks-Board/tasks-board/screenshots/board.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/its-sven/Tasks-Board/tasks-board/screenshots/table.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/its-sven/Tasks-Board/tasks-board/screenshots/dashboard.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/its-sven/Tasks-Board/tasks-board/screenshots/list.png</screenshot>
+    <screenshot>https://raw.githubusercontent.com/its-sven/Tasks-Board/tasks-board/screenshots/board-dark.png</screenshot>
     <dependencies>
         <php min-version="8.2" max-version="8.6" />
         <nextcloud min-version="31" max-version="35"/>

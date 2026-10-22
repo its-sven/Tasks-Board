@@ -256,3 +256,4 @@ coverage
 
 css/*
 !css/tasks-icon.css
+.php-cs-fixer.cache

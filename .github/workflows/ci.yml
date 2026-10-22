@@ -1,0 +1,179 @@
+# SPDX-FileCopyrightText: 2026 Sven Würth
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Checks every push to the main branch of Tasks Board. Pull requests are
+# checked by the workflows that come with Nextcloud Tasks (lint-*, node*, phpunit-*).
+
+name: CI
+
+on:
+  push:
+    branches:
+      - tasks-board
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  APP_NAME: tasks_board
+
+jobs:
+  javascript:
+    name: JavaScript lint, tests and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+
+      - name: Read package.json node and npm engines version
+        uses: skjnldsv/read-package-engines-version-actions@06d6db44aa62f4609ba070f556ec24bc99fb85cb # v4
+        id: engines
+        with:
+          fallbackNode: '^24'
+          fallbackNpm: '^11'
+
+      - name: Set up node ${{ steps.engines.outputs.nodeVersion }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.engines.outputs.nodeVersion }}
+
+      - name: Set up npm ${{ steps.engines.outputs.npmVersion }}
+        run: npm i -g 'npm@${{ steps.engines.outputs.npmVersion }}'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+  info-xml:
+    name: info.xml
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+
+      - name: Download schema
+        run: wget https://raw.githubusercontent.com/nextcloud/appstore/master/nextcloudappstore/api/v1/release/info.xsd
+
+      - name: Lint info.xml
+        uses: ChristophWurst/xmllint-action@36f2a302f84f8c83fceea0b9c59e1eb4a616d3c1 # v1.2
+        with:
+          xml-file: ./appinfo/info.xml
+          xml-schema-file: ./info.xsd
+
+  matrix:
+    name: Version matrix
+    runs-on: ubuntu-latest
+    outputs:
+      php-min: ${{ steps.versions.outputs.php-min }}
+      php-versions: ${{ steps.versions.outputs.php-available-list }}
+      server-versions: ${{ steps.versions.outputs.branches-max-list }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+
+      - name: Get version matrix
+        id: versions
+        uses: icewind1991/nextcloud-version-matrix@cd0211ffcef1065e2020cd579e4843b8746e7a58 # v1.3.3.3.1.3.3
+
+  php-lint:
+    name: PHP lint and code style
+    runs-on: ubuntu-latest
+    needs: matrix
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+
+      - name: Set up php ${{ needs.matrix.outputs.php-min }}
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: ${{ needs.matrix.outputs.php-min }}
+          extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, xmlreader, xmlwriter, zip, zlib, sqlite, pdo_sqlite
+          coverage: none
+          ini-file: development
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        run: composer i
+
+      - name: Syntax
+        run: composer run lint
+
+      - name: Code style
+        run: composer run cs:check || ( echo 'Please run composer run cs:fix to format your code' && exit 1 )
+
+  phpunit:
+    name: PHPUnit (PHP ${{ matrix.php-versions }}, Nextcloud ${{ matrix.server-versions }})
+    runs-on: ubuntu-latest
+    needs: matrix
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php-versions: ${{ fromJson(needs.matrix.outputs.php-versions) }}
+        server-versions: ${{ fromJson(needs.matrix.outputs.server-versions) }}
+
+    steps:
+      - name: Checkout server
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+        with:
+          submodules: true
+          repository: nextcloud/server
+          ref: ${{ matrix.server-versions }}
+
+      - name: Checkout app
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+        with:
+          path: apps/${{ env.APP_NAME }}
+
+      - name: Set up php ${{ matrix.php-versions }}
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: ${{ matrix.php-versions }}
+          extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, xmlreader, xmlwriter, zip, zlib, sqlite, pdo_sqlite
+          coverage: none
+          ini-file: development
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: apps/${{ env.APP_NAME }}
+        run: composer i
+
+      - name: Set up Nextcloud
+        run: |
+          mkdir data
+          ./occ maintenance:install --verbose --database=sqlite --database-name=nextcloud --admin-user admin --admin-pass admin
+          ./occ app:enable --force ${{ env.APP_NAME }}
+
+      - name: Unit tests
+        working-directory: apps/${{ env.APP_NAME }}
+        run: composer run test:unit
+
+      - name: Run Nextcloud
+        run: php -S localhost:8080 &
+
+      - name: Integration tests
+        working-directory: apps/${{ env.APP_NAME }}
+        run: composer run test:integration
+
+      - name: Print logs
+        if: always()
+        run: cat data/nextcloud.log || true

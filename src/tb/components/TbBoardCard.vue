@@ -130,6 +130,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 <script>
 import TaskCheckbox from '../../components/TaskCheckbox.vue'
 import { followUpState, isWaitingTagName, parentTask, priorityGroup } from '../board.js'
+import { shortDate } from '../dates.js'
 import { tbt } from '../l10n.js'
 import { countTaskItems, noteExcerpt } from '../markdown.js'
 import { isTaskReadOnly } from '../store/board.js'
@@ -218,7 +219,7 @@ export default {
 				return null
 			}
 			const state = followUpState(this.task)
-			const date = this.task.startMoment.isValid() ? this.task.startMoment.format('DD.MM.') : ''
+			const date = shortDate(this.task.startMoment)
 			switch (state) {
 			case 'pending':
 				return { short: tbt('Follow-up {date}', { date }), text: tbt('Follow-up {date}', { date }), alert: false }
@@ -234,7 +235,7 @@ export default {
 			return !this.task.closed && this.task.dueMoment.isValid() && this.task.dueMoment.isBefore(moment(), this.task.allDay ? 'day' : undefined)
 		},
 		dueShort() {
-			return this.task.dueMoment.isValid() ? this.task.dueMoment.format('DD.MM.') : ''
+			return shortDate(this.task.dueMoment)
 		},
 		dueString() {
 			return this.task.dueMoment.isValid() ? tbt('Due {date}', { date: this.task.dueMoment.format('L') }) : ''

@@ -130,6 +130,10 @@ appstore: clean build-js-production
 	--exclude=/composer.lock \
 	--exclude=/composer.phar \
 	--exclude=/CONTRIBUTING.md \
+	--exclude=/SECURITY.md \
+	--exclude=/docs \
+	--exclude=/scripts \
+	--exclude=/.php-cs-fixer.cache \
 	--exclude=/issue_template.md \
 	--exclude=/gulpfile.js \
 	--exclude=/Makefile \

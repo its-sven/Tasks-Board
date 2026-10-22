@@ -39,6 +39,7 @@ Opens a small menu: stop waiting or set a new follow-up date.
 </template>
 
 <script>
+import { shortDate } from '../dates.js'
 import { tbt } from '../l10n.js'
 import { isTaskReadOnly } from '../store/board.js'
 import { followUpState } from '../waiting.js'
@@ -87,7 +88,7 @@ export default {
 			return isTaskReadOnly(this.task)
 		},
 		date() {
-			return this.task.startMoment.isValid() ? this.task.startMoment.format('DD.MM.') : ''
+			return shortDate(this.task.startMoment)
 		},
 		label() {
 			if (this.followUp === 'noDate') {

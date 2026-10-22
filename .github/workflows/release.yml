@@ -1,0 +1,181 @@
+# SPDX-FileCopyrightText: 2026 Sven Würth
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Builds the app package when a version tag (v1.2.3) is pushed and publishes
+# it as a GitHub release. The release notes come from CHANGELOG.md.
+#
+# Optional, for the Nextcloud App Store (see docs/RELEASING.md):
+#   secret APP_PRIVATE_KEY  private key of the App Store certificate
+#   secret APP_CERTIFICATE  the certificate (default: taken from nextcloud/app-certificate-requests)
+#   secret APPSTORE_TOKEN   API token of apps.nextcloud.com
+# With the key the app is code signed; with key and token the release is uploaded to the App Store.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to build again, e.g. v1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  APP_NAME: tasks_board
+  TAG: ${{ inputs.tag || github.ref_name }}
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+
+    env:
+      HAS_KEY: ${{ secrets.APP_PRIVATE_KEY != '' }}
+      HAS_TOKEN: ${{ secrets.APPSTORE_TOKEN != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+        with:
+          ref: ${{ env.TAG }}
+
+      - name: Check version and read the release notes
+        id: version
+        run: |
+          version="${TAG#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Tag $TAG is not a version like v1.2.3"
+            exit 1
+          fi
+          app_version=$(sed -n 's:.*<version>\(.*\)</version>.*:\1:p' appinfo/info.xml | head -n 1)
+          package_version=$(node -p "require('./package.json').version")
+          if [ "$app_version" != "$version" ] || [ "$package_version" != "$version" ]; then
+            echo "::error::Tag $TAG does not match appinfo/info.xml ($app_version) and package.json ($package_version). Run scripts/bump-version.sh first."
+            exit 1
+          fi
+          awk -v version="$version" '
+            BEGIN { pattern = version; gsub(/\./, "\\.", pattern); pattern = "^## \\[?" pattern "\\]?( |$)" }
+            $0 ~ pattern { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "::error::CHANGELOG.md has no section \"## $version\""
+            exit 1
+          fi
+          min_version=$(sed -n 's:.*<nextcloud min-version="\([0-9]*\)".*:\1:p' appinfo/info.xml | head -n 1)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "server-branch=stable$min_version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Read package.json node and npm engines version
+        uses: skjnldsv/read-package-engines-version-actions@06d6db44aa62f4609ba070f556ec24bc99fb85cb # v4
+        id: engines
+        with:
+          fallbackNode: '^24'
+          fallbackNpm: '^11'
+
+      - name: Set up node ${{ steps.engines.outputs.nodeVersion }}
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ steps.engines.outputs.nodeVersion }}
+
+      - name: Set up npm ${{ steps.engines.outputs.npmVersion }}
+        run: npm i -g 'npm@${{ steps.engines.outputs.npmVersion }}'
+
+      - name: Build the app package
+        run: |
+          npm ci
+          make appstore
+          tar -tzf "build/artifacts/appstore/$APP_NAME.tar.gz" | head -n 20
+
+      - name: Checkout Nextcloud server for code signing
+        if: env.HAS_KEY == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5.0.1
+        with:
+          repository: nextcloud/server
+          ref: ${{ steps.version.outputs.server-branch }}
+          submodules: true
+          path: nextcloud-server
+
+      - name: Set up php
+        if: env.HAS_KEY == 'true'
+        uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # v2.40.0
+        with:
+          php-version: '8.3'
+          extensions: bz2, ctype, curl, dom, fileinfo, gd, iconv, intl, json, libxml, mbstring, openssl, pcntl, posix, session, simplexml, xmlreader, xmlwriter, zip, zlib, sqlite, pdo_sqlite
+          coverage: none
+
+      - name: Sign the code
+        if: env.HAS_KEY == 'true'
+        env:
+          APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+          APP_CERTIFICATE: ${{ secrets.APP_CERTIFICATE }}
+        run: |
+          umask 077
+          printf '%s\n' "$APP_PRIVATE_KEY" > "$RUNNER_TEMP/app.key"
+          if [ -n "$APP_CERTIFICATE" ]; then
+            printf '%s\n' "$APP_CERTIFICATE" > "$RUNNER_TEMP/app.crt"
+          else
+            curl -fsSL -o "$RUNNER_TEMP/app.crt" "https://raw.githubusercontent.com/nextcloud/app-certificate-requests/master/$APP_NAME/$APP_NAME.crt"
+          fi
+          php nextcloud-server/occ integrity:sign-app \
+            --privateKey="$RUNNER_TEMP/app.key" \
+            --certificate="$RUNNER_TEMP/app.crt" \
+            --path="$PWD/build/appstore/$APP_NAME"
+          test -f "build/appstore/$APP_NAME/appinfo/signature.json"
+          tar -czf "build/artifacts/appstore/$APP_NAME.tar.gz" -C build/appstore "$APP_NAME"
+
+      - name: Checksum
+        run: |
+          cd build/artifacts/appstore
+          sha256sum "$APP_NAME.tar.gz" > "$APP_NAME.tar.gz.sha256"
+          cat "$APP_NAME.tar.gz.sha256"
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          files=("build/artifacts/appstore/$APP_NAME.tar.gz" "build/artifacts/appstore/$APP_NAME.tar.gz.sha256")
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+            gh release edit "$TAG" --title "Tasks Board $VERSION" --notes-file "$RUNNER_TEMP/notes.md" --prerelease="$PRERELEASE"
+          else
+            gh release create "$TAG" "${files[@]}" --verify-tag --title "Tasks Board $VERSION" --notes-file "$RUNNER_TEMP/notes.md" --prerelease="$PRERELEASE"
+          fi
+
+      - name: Upload to the Nextcloud App Store
+        if: env.HAS_KEY == 'true' && env.HAS_TOKEN == 'true'
+        env:
+          APPSTORE_TOKEN: ${{ secrets.APPSTORE_TOKEN }}
+        run: |
+          signature=$(openssl dgst -sha512 -sign "$RUNNER_TEMP/app.key" "build/artifacts/appstore/$APP_NAME.tar.gz" | openssl base64 -A)
+          download="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$APP_NAME.tar.gz"
+          body=$(jq -n --arg download "$download" --arg signature "$signature" '{download: $download, signature: $signature, nightly: false}')
+          status=$(curl -sS -o "$RUNNER_TEMP/appstore.json" -w '%{http_code}' -X POST \
+            -H "Authorization: Token $APPSTORE_TOKEN" -H 'Content-Type: application/json' \
+            -d "$body" https://apps.nextcloud.com/api/v1/apps/releases)
+          cat "$RUNNER_TEMP/appstore.json"; echo
+          if [ "$status" != 200 ] && [ "$status" != 201 ]; then
+            echo "::error::App Store upload failed with HTTP $status"
+            exit 1
+          fi
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/app.key"

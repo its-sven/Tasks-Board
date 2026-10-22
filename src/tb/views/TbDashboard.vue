@@ -21,52 +21,75 @@ everything below them. A click on a task opens it in the sidebar.
 		</div>
 
 		<div class="tb-dash__filters" role="group" :aria-label="tbt('Filter')">
-			<NcSelect class="tb-dash__filter"
-				:model-value="selectedCalendars"
-				:options="calendarChoices"
-				label="displayName"
-				:multiple="true"
-				:limit="2"
-				:no-wrap="true"
-				:close-on-select="false"
-				:input-label="tbt('Lists')"
-				:placeholder="tbt('All lists')"
-				@update:model-value="setFilter({ dashCalendars: $event.map(calendar => calendar.id), dashProject: null })">
-				<template #option="option">
-					<span class="tb-dash__option">
-						<span class="tb-dash__dot" :style="{ 'background-color': option.color }" />
-						{{ option.displayName }}
-					</span>
-				</template>
-			</NcSelect>
-			<NcSelect class="tb-dash__filter"
-				:model-value="selectedProject"
-				:options="projectChoices"
-				label="summary"
-				:input-label="tbt('Project (main task)')"
-				:placeholder="tbt('All projects')"
-				@update:model-value="setFilter({ dashProject: $event ? $event.key : null })" />
-			<NcSelect class="tb-dash__filter"
-				:model-value="selectedPeople"
-				:options="peopleOptions"
-				label="displayName"
-				:multiple="true"
-				:limit="2"
-				:no-wrap="true"
-				:close-on-select="false"
-				:input-label="tbt('People')"
-				:placeholder="tbt('Everyone')"
-				@update:model-value="setFilter({ dashPeople: $event.map(person => person.uid) })" />
-			<NcSelect class="tb-dash__filter"
-				:model-value="filters.tags"
-				:options="tagChoices"
-				:multiple="true"
-				:limit="2"
-				:no-wrap="true"
-				:close-on-select="false"
-				:input-label="tbt('Tags')"
-				:placeholder="tbt('All tags')"
-				@update:model-value="setFilter({ dashTags: $event })" />
+			<!-- Own label and placeholder: they look the same in all versions of NcSelect -->
+			<div class="tb-dash__filter"
+				:class="{ 'tb-dash__filter--empty': !selectedCalendars.length }"
+				:data-placeholder="tbt('All lists')">
+				<label for="tb-dash-lists" class="tb-dash__label">{{ tbt('Lists') }}</label>
+				<NcSelect input-id="tb-dash-lists"
+					:model-value="selectedCalendars"
+					:options="calendarChoices"
+					label="displayName"
+					:multiple="true"
+					:limit="2"
+					:no-wrap="true"
+					:close-on-select="false"
+					:label-outside="true"
+					:placeholder="tbt('All lists')"
+					@update:model-value="setFilter({ dashCalendars: $event.map(calendar => calendar.id), dashProject: null })">
+					<template #option="option">
+						<span class="tb-dash__option">
+							<span class="tb-dash__dot" :style="{ 'background-color': option.color }" />
+							{{ option.displayName }}
+						</span>
+					</template>
+				</NcSelect>
+			</div>
+			<div class="tb-dash__filter"
+				:class="{ 'tb-dash__filter--empty': !selectedProject }"
+				:data-placeholder="tbt('All projects')">
+				<label for="tb-dash-project" class="tb-dash__label">{{ tbt('Project (main task)') }}</label>
+				<!-- One project at a time: a new choice replaces the old one -->
+				<NcSelect input-id="tb-dash-project"
+					:model-value="selectedProject ? [selectedProject] : []"
+					:options="projectChoices"
+					label="summary"
+					:multiple="true"
+					:no-wrap="true"
+					:label-outside="true"
+					@update:model-value="setFilter({ dashProject: $event.length ? $event[$event.length - 1].key : null })" />
+			</div>
+			<div class="tb-dash__filter"
+				:class="{ 'tb-dash__filter--empty': !selectedPeople.length }"
+				:data-placeholder="tbt('Everyone')">
+				<label for="tb-dash-people" class="tb-dash__label">{{ tbt('People') }}</label>
+				<NcSelect input-id="tb-dash-people"
+					:model-value="selectedPeople"
+					:options="peopleOptions"
+					label="displayName"
+					:multiple="true"
+					:limit="2"
+					:no-wrap="true"
+					:close-on-select="false"
+					:label-outside="true"
+					:placeholder="tbt('Everyone')"
+					@update:model-value="setFilter({ dashPeople: $event.map(person => person.uid) })" />
+			</div>
+			<div class="tb-dash__filter"
+				:class="{ 'tb-dash__filter--empty': !filters.tags.length }"
+				:data-placeholder="tbt('All tags')">
+				<label for="tb-dash-tags" class="tb-dash__label">{{ tbt('Tags') }}</label>
+				<NcSelect input-id="tb-dash-tags"
+					:model-value="filters.tags"
+					:options="tagChoices"
+					:multiple="true"
+					:limit="2"
+					:no-wrap="true"
+					:close-on-select="false"
+					:label-outside="true"
+					:placeholder="tbt('All tags')"
+					@update:model-value="setFilter({ dashTags: $event })" />
+			</div>
 			<NcCheckboxRadioSwitch type="switch"
 				class="tb-dash__switch"
 				:model-value="filters.rootOnly"
@@ -211,6 +234,7 @@ everything below them. A click on a task opens it in the sidebar.
 
 <script>
 import { assigneeOf } from '../assignee.js'
+import { shortDate } from '../dates.js'
 import { isWaitingTagName, priorityGroup } from '../board.js'
 import { tbt } from '../l10n.js'
 import {
@@ -389,7 +413,7 @@ export default {
 		},
 		attentionLists() {
 			const lists = attention(this.tasks, this.now)
-			const date = (value) => value?.isValid() ? value.format('DD.MM.') : ''
+			const date = (value) => shortDate(value)
 			const person = (task) => assigneeOf(task)?.displayName || ''
 			return [
 				{ key: 'overdue', title: this.stateLabel('overdue'), icon: AlertCircleOutline, tasks: lists.overdue, hint: tbt('Open and due before today'), meta: task => [person(task), tbt('due {date}', { date: date(task.dueMoment) })].filter(Boolean).join(' · ') },
@@ -552,10 +576,45 @@ export default {
 	}
 
 	&__filter {
+		display: grid;
 		flex: 1 1 170px;
+		grid-template-rows: auto auto;
+		gap: 2px;
 		max-width: 250px;
 		min-width: 150px;
-		margin: 0 !important;
+
+		:deep(.v-select.select) {
+			grid-row: 2;
+			grid-column: 1;
+			width: 100%;
+			min-width: 0;
+			margin: 0 !important;
+		}
+
+		// Placeholder over the empty field (NcSelect shows none for multiple choice)
+		&--empty::after {
+			content: attr(data-placeholder);
+			grid-row: 2;
+			grid-column: 1;
+			align-self: center;
+			z-index: 1;
+			overflow: hidden;
+			padding-inline: 14px 44px;
+			color: var(--color-text-maxcontrast);
+			white-space: nowrap;
+			text-overflow: ellipsis;
+			pointer-events: none;
+		}
+
+		&--empty:focus-within::after {
+			visibility: hidden;
+		}
+	}
+
+	&__label {
+		color: var(--color-text-maxcontrast);
+		font-size: var(--font-size-small, 13px);
+		padding-inline-start: 2px;
 	}
 
 	&__switch {
