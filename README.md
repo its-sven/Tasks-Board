@@ -32,7 +32,7 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 * **Table** with columns you can show, hide, move and sort (title, person, start, due, list, main task, status, priority, tags, progress, overview, created, last modified). Main tasks open like a tree with their subtasks below them. Status, priority, person and due date can be changed right in the cell.
 * **Dashboard** with the current state, the distribution per person, list, project, priority and tag, the history of the last 12 weeks and the tasks that need attention (overdue, follow-up due, nobody assigned, important but untouched for two weeks). Filters for lists, project, persons and tags.
 * **List** as cards or compact rows, collapsible subtasks, more sort orders (status, progress, person, list, main task), a separate order for subtasks and grouping by status, tag or priority.
-* **One button** in the header shows or hides completed and cancelled tasks in all three views.
+* **One button** in the header shows or hides completed and cancelled tasks (including subtasks) in all three views, in lists and collections.
 
 **Working together**
 

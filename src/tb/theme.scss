@@ -700,6 +700,13 @@ $breakpoint-mobile: 1024px;
 		}
 	}
 
+	// Collections in the list view: heading above the recently closed tasks
+	.tb-closed-heading {
+		margin: 12px 12px 4px;
+		color: var(--color-text-maxcontrast);
+		font-size: 13px;
+	}
+
 	// Status in the sidebar: icon in the colour of the state, text like the other fields
 	.multiselect-picker-option.tb-status-option {
 		color: var(--color-main-text);

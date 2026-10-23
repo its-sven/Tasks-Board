@@ -37,6 +37,18 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					:collection-string="collectionId"
 					:calendar-id="calendar.id"
 					:collection-id="collectionId" />
+				<!-- Tasks Board: recently closed tasks, shown with the button in the header -->
+				<template v-if="calendar.tbClosedTasks && calendar.tbClosedTasks.length">
+					<p class="tb-closed-heading">
+						{{ tbt('Completed tasks of the last {days} days', { days: tbRecentDays }) }}
+					</p>
+					<TaskDragContainer :tasks="calendar.tbClosedTasks"
+						:disabled="calendar.readOnly"
+						class="completed"
+						:collection-string="collectionId"
+						:calendar-id="calendar.id"
+						:collection-id="collectionId" />
+				</template>
 				<LoadCompletedButton v-if="collectionId === 'completed'" :calendars="[calendar]" />
 			</div>
 		</div>
@@ -49,6 +61,8 @@ import HeaderBar from '../../components/HeaderBar.vue'
 import LoadCompletedButton from '../../components/LoadCompletedButton.vue'
 import TaskDragContainer from '../../components/TaskDragContainer.vue'
 import { isTaskInList, isParentInList } from '../../store/storeHelper.js'
+import { closedTasksOfCollection, RECENTLY_CLOSED_DAYS } from '../../tb/board.js'
+import { tbt } from '../../tb/l10n.js'
 import './task-list.scss'
 
 import { mapGetters } from 'vuex'
@@ -74,15 +88,22 @@ export default {
 		 */
 		filteredCalendars() {
 			const filteredCalendars = []
+			// Tasks Board: closed tasks only with the button in the header
+			const showClosed = this.$store.getters.tbShowClosed
 			this.calendars.forEach(calendar => {
 				calendar.filteredTasks = Object.values(calendar.tasks).filter(task => {
 					return isTaskInList(task, this.collectionId) && (!task.related || !isParentInList(task, calendar.tasks))
 				})
-				if (calendar.filteredTasks.length) {
+				calendar.tbClosedTasks = showClosed ? closedTasksOfCollection(calendar, this.collectionId) : []
+				if (calendar.filteredTasks.length || calendar.tbClosedTasks.length) {
 					filteredCalendars.push(calendar)
 				}
 			})
 			return filteredCalendars
+		},
+
+		tbRecentDays() {
+			return RECENTLY_CLOSED_DAYS
 		},
 
 		collectionId() {
@@ -91,6 +112,9 @@ export default {
 		...mapGetters({
 			calendars: 'getSortedCalendars',
 		}),
+	},
+	methods: {
+		tbt,
 	},
 }
 </script>

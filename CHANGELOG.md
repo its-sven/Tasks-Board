@@ -1,3 +1,10 @@
+## 1.1.1 - 2026-10-23
+
+### Fixed
+- The button for completed and cancelled tasks was missing in the list view of the collections (All, Current, Important, Today, Assigned to me). There it now shows the tasks closed in the last 14 days, like the board and the table
+- Completed subtasks follow the button as well (list and board cards); the menu entry "Hide closed subtasks" of a task is only offered while completed tasks are shown
+- Closed tasks of the template list no longer appear in the collections
+
 ## 1.1.0 - 2026-10-23
 
 ### Added

@@ -9,6 +9,7 @@
 
 import { isTaskInList, isParentInList, searchSubTasks, sort } from '../store/storeHelper.js'
 import { assigneeOf, isAssignedTo } from './assignee.js'
+import { isTemplateCalendar } from './templates.js'
 
 import { getCurrentUser } from '@nextcloud/auth'
 
@@ -62,6 +63,10 @@ export function closedMoment(task) {
  * @return {boolean}
  */
 export function closedTaskInCollection(task, collectionId, now, me) {
+	// Like the open tasks: the template list stays out of the collections
+	if (isTemplateCalendar(task.calendar)) {
+		return false
+	}
 	const closed = closedMoment(task)
 	if (!closed.isValid() || now.diff(closed, 'days', true) > RECENTLY_CLOSED_DAYS) {
 		return false
@@ -73,6 +78,22 @@ export function closedTaskInCollection(task, collectionId, now, me) {
 		return isAssignedTo(task, me)
 	}
 	return true
+}
+
+/**
+ * The closed main tasks of a list that belong to a collection (closed recently)
+ *
+ * @param {object} calendar The list
+ * @param {string} collectionId The collection
+ * @param {object} options Options
+ * @param {moment} options.now The current time
+ * @param {string} options.me User id of the current user
+ * @return {Array} The tasks
+ */
+export function closedTasksOfCollection(calendar, collectionId, { now = moment(), me = getCurrentUser()?.uid } = {}) {
+	return Object.values(calendar.tasks).filter(task => task.closed
+		&& closedTaskInCollection(task, collectionId, now, me)
+		&& (!task.related || !isParentInList(task, calendar.tasks)))
 }
 
 /**

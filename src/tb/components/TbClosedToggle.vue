@@ -54,15 +54,13 @@ export default {
 			return viewKeyForRoute(this.$route)
 		},
 		/**
-		 * Lists always show completed tasks on request, collections only as board or table
+		 * In all lists and in the collections that can also be shown as board or table.
+		 * Not in "Done" (only closed tasks anyway), "Waiting", "Follow-up due" and "Week".
 		 *
 		 * @return {boolean}
 		 */
 		visible() {
-			if (!this.viewKey) {
-				return false
-			}
-			return !!this.$route.params.calendarId || this.$store.getters.tbView(this.viewKey).mode !== 'list'
+			return !!this.viewKey
 		},
 		calendars() {
 			if (this.$route.params.calendarId) {

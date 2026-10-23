@@ -127,7 +127,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 						</template>
 						{{ task.hideSubtasks ? t('tasks', 'Show subtasks') : t('tasks', 'Hide subtasks') }}
 					</NcActionButton>
-					<NcActionButton v-if="hasCompletedSubtasks"
+					<NcActionButton v-if="hasCompletedSubtasks && $store.getters.tbShowClosed"
 						class="reactive no-nav"
 						@click="toggleCompletedSubtasksVisibility(task)">
 						<template #icon>
@@ -454,7 +454,8 @@ export default {
 		 */
 		filteredSubtasks() {
 			let subTasks = Object.values(this.task.subTasks)
-			if (this.task.hideCompletedSubtasks) {
+			// Tasks Board: closed subtasks follow the button for completed tasks in the header
+			if (this.task.hideCompletedSubtasks || !this.$store.getters.tbShowClosed) {
 				subTasks = subTasks.filter(task => {
 					return !task.closed
 				})

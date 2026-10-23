@@ -1,6 +1,7 @@
 import {
 	boardColumn,
 	buildBoard,
+	closedTasksOfCollection,
 	collectBoardTasks,
 	followUpState,
 	laneTaskDefaults,
@@ -12,6 +13,7 @@ import {
 } from '../../../../src/tb/board.js'
 import tbBoard from '../../../../src/tb/store/board.js'
 import tasksModule from '../../../../src/store/tasks.js'
+import { setActiveTemplateId } from '../../../../src/tb/templates.js'
 
 import moment from '@nextcloud/moment'
 
@@ -289,5 +291,28 @@ describe('board - order by hand', () => {
 		b.sortOrder = 1
 		const lanes = buildBoard([a, b], { sortOrder: 'manual' })
 		expect(lanes[0].columns.open.map(task => task.uid)).toEqual(['b', 'a'])
+	})
+})
+
+describe('board - closed tasks of a collection', () => {
+	it('takes recently closed main tasks, not old ones, subtasks or the template list', () => {
+		const now = moment()
+		const list = makeCalendar('closed-list')
+		const recent = makeTask(list, { uid: 'recent', status: 'COMPLETED', percent: 100, completed: now.clone().subtract(2, 'days') })
+		makeTask(list, { uid: 'old', status: 'COMPLETED', percent: 100, completed: now.clone().subtract(30, 'days') })
+		makeTask(list, { uid: 'open' })
+		const parent = makeTask(list, { uid: 'parent' })
+		const sub = makeTask(list, { uid: 'sub', related: 'parent', status: 'COMPLETED', percent: 100, completed: now.clone().subtract(1, 'days') })
+		link(parent, sub)
+		expect(closedTasksOfCollection(list, 'all', { now, me: 'admin' })).toEqual([recent])
+
+		const templates = makeCalendar('closed-templates')
+		makeTask(templates, { uid: 'tpl', status: 'COMPLETED', percent: 100, completed: now.clone().subtract(1, 'days') })
+		setActiveTemplateId('closed-templates')
+		try {
+			expect(closedTasksOfCollection(templates, 'all', { now, me: 'admin' })).toEqual([])
+		} finally {
+			setActiveTemplateId(null)
+		}
 	})
 })

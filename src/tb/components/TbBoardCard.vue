@@ -102,7 +102,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 			</span>
 		</div>
 
-		<ul v-if="expanded && subtaskCount.total" class="tb-card__subtasks">
+		<ul v-if="expanded && subtasks.length" class="tb-card__subtasks">
 			<li v-for="subtask in subtasks"
 				:key="subtask.key"
 				class="tb-card__subtask"
@@ -258,7 +258,8 @@ export default {
 			const getters = this.$store.getters
 			const order = getters.tbSubtaskOrder !== 'inherit' ? getters.tbSubtaskOrder : getters.sortOrder
 			const sorted = tbSort(Object.values(this.task.subTasks || {}), order, getters.tbSubtaskOrder !== 'inherit' ? false : getters.sortDirection)
-			return [...sorted.filter(task => !task.closed), ...sorted.filter(task => task.closed)]
+			// Closed subtasks only with the button for completed tasks in the header
+			return [...sorted.filter(task => !task.closed), ...(getters.tbShowClosed ? sorted.filter(task => task.closed) : [])]
 		},
 		hasMeta() {
 			return !!(this.followUp || this.dueString || this.subtaskCount.total || this.showProgress || this.checklist.total)

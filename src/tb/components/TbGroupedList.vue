@@ -52,6 +52,17 @@ except dragging between groups (switched off, the groups come from the task data
 				<DeleteCompletedModal v-if="calendar.loadedCompleted && !calendar.readOnly" :calendar="calendar" />
 			</div>
 			<LoadCompletedButton v-else-if="collectionId === 'completed'" :calendars="calendars" />
+			<!-- Recently closed tasks of a collection, shown with the button in the header -->
+			<div v-else-if="closedOfCollection.length" class="grouped-tasks">
+				<p class="tb-closed-heading">
+					{{ tbt('Completed tasks of the last {days} days', { days: recentDays }) }}
+				</p>
+				<TaskDragContainer :tasks="closedOfCollection"
+					:disabled="true"
+					class="completed"
+					:collection-string="collectionId"
+					:collection-id="collectionId" />
+			</div>
 		</div>
 	</div>
 </template>
@@ -62,6 +73,7 @@ import HeaderBar from '../../components/HeaderBar.vue'
 import LoadCompletedButton from '../../components/LoadCompletedButton.vue'
 import TaskDragContainer from '../../components/TaskDragContainer.vue'
 import { isParentInList, isTaskInList } from '../../store/storeHelper.js'
+import { closedTasksOfCollection, RECENTLY_CLOSED_DAYS } from '../board.js'
 import { tbt } from '../l10n.js'
 import { groupTasks } from '../sort.js'
 import TbAvatar from './TbAvatar.vue'
@@ -126,6 +138,15 @@ export default {
 		},
 		groups() {
 			return groupTasks(this.tasks, this.grouping)
+		},
+		closedOfCollection() {
+			if (this.calendar || !this.collectionId || !this.$store.getters.tbShowClosed) {
+				return []
+			}
+			return this.calendars.flatMap(calendar => closedTasksOfCollection(calendar, this.collectionId))
+		},
+		recentDays() {
+			return RECENTLY_CLOSED_DAYS
 		},
 		showHidden: {
 			get() {
