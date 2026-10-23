@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <img src="screenshots/board.png" alt="Board with the columns Open, In progress, Waiting and Done">
+  <img src="screenshots/board.png" alt="Board with the columns Open, In progress, Waiting, Done and Cancelled">
 </p>
 
 Tasks Board is based on the [Nextcloud Tasks](https://github.com/nextcloud/tasks) app and uses the same CalDAV task lists. Both apps can be enabled side by side, so you can try it without moving any data, and every CalDAV client keeps working.
@@ -28,13 +28,16 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 
 **Views**
 
-* **Board** (Kanban) with the columns Open, In progress, Waiting and Done (cancelled tasks on request). Drag cards between columns, sort them by hand, show rows per priority, list, main task, tag or person, open subtasks on the card.
-* **Table** with columns you can show, hide, move and sort (title, person, start, due, list, main task, status, priority, tags, progress, overview, created, last modified). Status, priority, person and due date can be changed right in the cell.
+* **Board** (Kanban) with the columns Open, In progress, Waiting and Done (and Cancelled). Drag cards between columns, sort them by hand, show rows per priority, list, main task, tag or person, open subtasks on the card.
+* **Table** with columns you can show, hide, move and sort (title, person, start, due, list, main task, status, priority, tags, progress, overview, created, last modified). Main tasks open like a tree with their subtasks below them. Status, priority, person and due date can be changed right in the cell.
 * **Dashboard** with the current state, the distribution per person, list, project, priority and tag, the history of the last 12 weeks and the tasks that need attention (overdue, follow-up due, nobody assigned, important but untouched for two weeks). Filters for lists, project, persons and tags.
 * **List** as cards or compact rows, collapsible subtasks, more sort orders (status, progress, person, list, main task), a separate order for subtasks and grouping by status, tag or priority.
+* **One button** in the header shows or hides completed and cancelled tasks in all three views.
 
 **Working together**
 
+* **Live updates:** changes by others, from another window or from a CalDAV client appear without reloading.
+* **Lists for a group:** create a list and share it with a group in one step.
 * **Assign tasks** to one person who has access to the list (owner and everyone it is shared with, also via groups). Collection "Assigned to me", sorting, grouping, board rows and filter by person.
 * **Notifications** when a task is assigned to you, when a task you assigned is completed, when a follow-up date is reached and when a task is due today. Each kind can be switched off.
 * **Waiting and follow-up:** a task waits when it has the waiting tag or starts in the future. Collections "Waiting" and "Follow-up due", a dialog to pick the follow-up date and a reminder when it is reached.
@@ -43,16 +46,18 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 **Getting things done faster**
 
 * **Templates:** a template list holds tasks with subtasks, "Create from template" copies them into any list.
+* **Import** of an iCalendar file (.ics) into a list, for example the export of another list, with all information.
+* **Five states everywhere:** Open, In progress, Waiting, Done and Cancelled in the sidebar, board and table.
 * **Multi-select** with actions for all selected tasks (complete or reopen, status, person, tags, priority, due date, move to another list).
 * **Notes editor** with a Markdown toolbar and checklists you can tick off directly in the sidebar.
 * **Automatic progress** of main tasks from their subtasks; new subtasks take over priority, tags and person of the main task.
-* **Keyboard shortcuts** (press `?` in the app), navigation and sidebar you can resize and collapse, light and dark theme.
+* **Keyboard shortcuts** (press `?` in the app), navigation and sidebar you can resize and collapse, collections in your own order, light and dark theme.
 
 ## Screenshots
 
 <table>
   <tr>
-    <td width="50%"><img src="screenshots/table.png" alt="Table view sorted by due date"><br><sub><b>Table</b> – sortable columns, quick changes in the cells</sub></td>
+    <td width="50%"><img src="screenshots/table.png" alt="Table sorted by due date, two main tasks opened with their subtasks below"><br><sub><b>Table</b> – subtasks as a tree, sortable columns, quick changes in the cells</sub></td>
     <td width="50%"><img src="screenshots/dashboard.png" alt="Dashboard with numbers, status ring and distribution per person and list"><br><sub><b>Dashboard</b> – what is open, on whom and where (<a href="screenshots/dashboard-full.png">full page</a>)</sub></td>
   </tr>
   <tr>
@@ -100,6 +105,14 @@ The follow-up and due-today reminders are sent by a background job (hourly). Mak
 ### Can I use Tasks Board and the Tasks app at the same time?
 
 Yes. Both work on the same CalDAV task lists. Settings like views, columns and the tag list belong to Tasks Board only.
+
+### Can a list belong to a group?
+
+In Nextcloud a list always belongs to one person, groups can only get shares. "Add list for a group…" creates the list for you and shares it with the group right away; everyone in the group sees it, also people who join later. For lists that should not depend on one person, create them with a shared account.
+
+### How do I move tasks to another server or list?
+
+Use "Export" in the menu of a list and "Import tasks…" in the menu of the target list. The export contains the tasks as they are stored (person, tags, subtasks, order, reminders), the import keeps all of it. Settings like views and columns are not part of the file.
 
 ### Which apps sync with the task lists?
 

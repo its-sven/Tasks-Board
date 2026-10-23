@@ -33,7 +33,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 			:options="options"
 			:placeholder="placeholder"
 			:multiple="true"
-			:close-on-select="false"
+			:keep-open="true"
 			:append-to-body="false"
 			:tag-placeholder="t('tasks', 'Add this as a new tag')"
 			@update:model-value="setTags"

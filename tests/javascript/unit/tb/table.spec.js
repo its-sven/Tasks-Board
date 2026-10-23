@@ -1,4 +1,4 @@
-import { moveColumn, normalizeColumns, setColumnVisible, shownColumns, storableColumns, TABLE_COLUMNS } from '../../../../src/tb/table.js'
+import { moveColumn, normalizeColumns, setColumnVisible, shownColumns, storableColumns, TABLE_COLUMNS, treeRows } from '../../../../src/tb/table.js'
 import { resolveDrag } from '../../../../src/tb/resize.js'
 import { nextViewMode } from '../../../../src/tb/shortcuts.js'
 import { sort } from '../../../../src/tb/sort.js'
@@ -68,5 +68,56 @@ describe('resize and view switch', () => {
 
 	it('B goes list → board → table → list', () => {
 		expect(['list', 'board', 'table', 'x'].map(nextViewMode)).toEqual(['board', 'table', 'list', 'list'])
+	})
+})
+
+describe('table - tree', () => {
+	const build = () => {
+		const cal = makeCalendar('t')
+		const main = makeTask(cal, { uid: 'main', summary: 'Main' })
+		const b = makeTask(cal, { uid: 'b', summary: 'B step', related: 'main' })
+		const a = makeTask(cal, { uid: 'a', summary: 'A step', related: 'main', tags: ['Server'] })
+		const a1 = makeTask(cal, { uid: 'a1', summary: 'A detail', related: 'a', tags: ['Kunde'] })
+		const done = makeTask(cal, { uid: 'done', summary: 'C done', related: 'main', status: 'COMPLETED', percent: 100 })
+		link(main, b)
+		link(main, a)
+		link(a, a1)
+		link(main, done)
+		const other = makeTask(cal, { uid: 'other', summary: 'Other' })
+		return { main, a, b, a1, done, other }
+	}
+	const alpha = tasks => [...tasks].sort((x, y) => x.summary.localeCompare(y.summary))
+	const shape = rows => rows.map(row => '  '.repeat(row.depth) + row.task.summary + (row.hasChildren ? (row.expanded ? ' v' : ' >') : '') + (row.context ? ' (context)' : ''))
+
+	it('shows only main tasks while they are closed', () => {
+		const { main, other } = build()
+		const rows = treeRows([main, other], { isExpanded: () => false, order: alpha })
+		expect(shape(rows)).toEqual(['Main >', 'Other'])
+	})
+
+	it('opens each level on its own and sorts the siblings', () => {
+		const { main, other } = build()
+		const open = new Set(['main'])
+		const isExpanded = task => open.has(task.uid)
+		const include = task => !task.closed
+		expect(shape(treeRows([main, other], { isExpanded, include, order: alpha }))).toEqual(['Main v', '  A step >', '  B step', 'Other'])
+		open.add('a')
+		expect(shape(treeRows([main, other], { isExpanded, include, order: alpha }))).toEqual(['Main v', '  A step v', '    A detail', '  B step', 'Other'])
+		// With closed tasks
+		expect(shape(treeRows([main], { isExpanded, order: alpha }))).toEqual(['Main v', '  A step v', '    A detail', '  B step', '  C done'])
+	})
+
+	it('shows the way to the matches while filtering', () => {
+		const { main, other } = build()
+		const matches = task => task.tags.includes('Kunde')
+		const rows = treeRows([main, other], { isExpanded: () => false, order: alpha, matches })
+		expect(shape(rows)).toEqual(['Main v (context)', '  A step v (context)', '    A detail', 'Other (context)'])
+	})
+
+	it('survives RELATED-TO loops', () => {
+		const { main, a1 } = build()
+		link(a1, main)
+		const rows = treeRows([main], { isExpanded: () => true, order: alpha })
+		expect(shape(rows)).toEqual(['Main v', '  A step v', '    A detail', '  B step', '  C done'])
 	})
 })

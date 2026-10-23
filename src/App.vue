@@ -36,6 +36,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 <script>
 import AppNavigation from './views/AppNavigation.vue'
 import TbShortcuts from './tb/components/TbShortcuts.vue'
+import { startLiveSync } from './tb/live.js'
 import client from './services/cdav.js'
 
 import { emit, subscribe, unsubscribe } from '@nextcloud/event-bus'
@@ -119,6 +120,8 @@ export default {
 				this.$store.dispatch('getTasksFromCalendar', { calendar, completed: false, related: null }),
 			)).then(() => {
 				this.loading = false
+				// Tasks Board: changes of others show up without reloading
+				startLiveSync(this.$store)
 			})
 		},
 

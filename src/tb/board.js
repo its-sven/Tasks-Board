@@ -35,11 +35,8 @@ export const DEFAULT_VIEW = Object.freeze({
 	mode: 'list',
 	cards: 'root',
 	lanes: 'none',
-	showCancelled: false,
 	// Order of the cards: 'sort' (like the sort order) or 'manual' (dragged by hand)
 	boardOrder: 'sort',
-	// Table: also show completed and cancelled tasks
-	tableShowClosed: false,
 })
 
 /**
@@ -64,7 +61,7 @@ export function closedMoment(task) {
  * @param {string} me User id of the current user
  * @return {boolean}
  */
-function closedTaskInCollection(task, collectionId, now, me) {
+export function closedTaskInCollection(task, collectionId, now, me) {
 	const closed = closedMoment(task)
 	if (!closed.isValid() || now.diff(closed, 'days', true) > RECENTLY_CLOSED_DAYS) {
 		return false
@@ -93,7 +90,7 @@ function closedTaskInCollection(task, collectionId, now, me) {
  */
 export function collectBoardTasks({ calendars, collectionId = null, cards = 'root', searchQuery = '', filter = { tags: [] }, now = moment(), me = getCurrentUser()?.uid }) {
 	const rootOnly = cards !== 'all'
-	const filtering = !!searchQuery || (filter?.tags?.length > 0) || (filter?.tbAssignees?.length > 0)
+	const filtering = isFiltering(searchQuery, filter)
 	const result = []
 	for (const calendar of calendars) {
 		for (const task of Object.values(calendar.tasks)) {
@@ -115,6 +112,17 @@ export function collectBoardTasks({ calendars, collectionId = null, cards = 'roo
 		}
 	}
 	return result
+}
+
+/**
+ * Whether a search or a filter is active
+ *
+ * @param {string} searchQuery The search
+ * @param {object} filter The filter (tags, persons)
+ * @return {boolean}
+ */
+export function isFiltering(searchQuery, filter) {
+	return !!searchQuery || (filter?.tags?.length > 0) || (filter?.tbAssignees?.length > 0)
 }
 
 /**

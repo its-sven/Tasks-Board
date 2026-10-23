@@ -111,3 +111,46 @@ export function setColumnVisible(columns, key, visible) {
 export function shownColumns(columns, singleList) {
 	return columns.filter(column => column.visible && !(singleList && column.key === 'calendar'))
 }
+
+/**
+ * Rows of the table as a tree: main tasks with their subtasks below them.
+ * Each level is sorted on its own, so subtasks stay below their main task.
+ * While searching or filtering, only matches and the tasks above them are
+ * shown, and the way to every match is open.
+ *
+ * @param {Array} roots The main tasks (already sorted)
+ * @param {object} options Options
+ * @param {Function} options.isExpanded (task) => whether its subtasks are open
+ * @param {Function} options.include (subtask) => whether it belongs in the table
+ * @param {Function} options.order (tasks) => the tasks sorted
+ * @param {Function|null} options.matches (task) => whether it matches the search/filter, null = no search
+ * @return {Array} Rows: { task, depth, hasChildren, expanded, context }
+ */
+export function treeRows(roots, { isExpanded, include = () => true, order = tasks => tasks, matches = null }) {
+	const rows = []
+	const filtering = typeof matches === 'function'
+	const leadsToMatch = new Map()
+	const children = task => Object.values(task.subTasks || {}).filter(include)
+	const relevant = (task, path) => {
+		if (!filtering) {
+			return true
+		}
+		if (!leadsToMatch.has(task.key)) {
+			// Guard against RELATED-TO loops
+			const next = new Set(path).add(task.key)
+			leadsToMatch.set(task.key, matches(task) || children(task).some(child => !next.has(child.key) && relevant(child, next)))
+		}
+		return leadsToMatch.get(task.key)
+	}
+	const visit = (task, depth, path) => {
+		const next = new Set(path).add(task.key)
+		const kids = order(children(task).filter(child => !next.has(child.key) && relevant(child, next)))
+		const expanded = kids.length > 0 && (filtering || isExpanded(task))
+		rows.push({ task, depth, hasChildren: kids.length > 0, expanded, context: filtering && !matches(task) })
+		if (expanded) {
+			kids.forEach(kid => visit(kid, depth + 1, next))
+		}
+	}
+	roots.forEach(root => visit(root, 0, new Set()))
+	return rows
+}

@@ -51,6 +51,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 		<FilterDropdown />
 		<TbSortDropdown />
 		<TbBoardOptions />
+		<TbClosedToggle />
 		<TbSelectionToggle />
 		<TbSelectionBar />
 		<CreateMultipleTasksDialog v-if="showCreateMultipleTasksModal"
@@ -66,6 +67,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 import FilterDropdown from './FilterDropdown.vue'
 import TbSortDropdown from '../tb/components/TbSortDropdown.vue'
 import TbBoardOptions from '../tb/components/TbBoardOptions.vue'
+import TbClosedToggle from '../tb/components/TbClosedToggle.vue'
 import TbViewSwitch from '../tb/components/TbViewSwitch.vue'
 import { tbt } from '../tb/l10n.js'
 import { currentPerson } from '../tb/store/assignment.js'
@@ -93,6 +95,7 @@ export default {
 		NcTextField,
 		FilterDropdown,
 		TbBoardOptions,
+		TbClosedToggle,
 		TbTargetListPicker,
 		TbSelectionBar,
 		TbSelectionToggle,

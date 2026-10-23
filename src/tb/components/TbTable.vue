@@ -33,14 +33,17 @@ person and due date can be changed directly in the cell.
 					</tr>
 				</thead>
 				<tbody>
-					<tr v-for="task in rows"
+					<tr v-for="{ task, depth, hasChildren, expanded, context } in rows"
 						:key="task.key"
 						:data-task-key="task.key"
+						:data-depth="depth"
 						class="tb-table__row"
 						:class="{
 							'tb-table__row--active': task.uri === $route.params.taskId,
 							'tb-table__row--selected': $store.getters.isTbSelected(task.key),
 							'tb-table__row--closed': task.closed,
+							'tb-table__row--context': context,
+							'tb-table__row--sub': depth > 0,
 						}"
 						@click="onRowClick(task, $event)">
 						<td v-for="column in columns"
@@ -48,6 +51,22 @@ person and due date can be changed directly in the cell.
 							:class="['tb-table__td', 'tb-table__td--' + column.key]">
 							<!-- Task -->
 							<div v-if="column.key === 'summary'" class="tb-table__summary">
+								<!-- Tree: indentation per level and the arrow for the subtasks -->
+								<span v-if="tree"
+									class="tb-table__tree"
+									:style="{ width: (depth * 20 + 24) + 'px' }">
+									<button v-if="hasChildren"
+										type="button"
+										class="tb-table__expand no-nav"
+										:class="{ 'tb-table__expand--open': expanded }"
+										:disabled="filtering"
+										:aria-expanded="expanded ? 'true' : 'false'"
+										:aria-label="expanded ? tbt('Hide subtasks') : tbt('Show subtasks')"
+										:title="(expanded ? tbt('Hide subtasks') : tbt('Show subtasks')) + ' (' + Object.keys(task.subTasks).length + ')'"
+										@click.stop="toggleRow(task)">
+										<ChevronRight :size="18" />
+									</button>
+								</span>
 								<TaskCheckbox class="tb-table__check no-nav"
 									:completed="task.completed"
 									:cancelled="task.status === 'CANCELLED'"
@@ -152,17 +171,6 @@ person and due date can be changed directly in the cell.
 				{{ tbt('No tasks') }}
 			</p>
 		</div>
-		<NcButton v-if="view.tableShowClosed && !completedLoaded"
-			class="tb-table__load"
-			variant="tertiary"
-			:disabled="loadingCompleted"
-			@click="loadCompleted">
-			<template #icon>
-				<CloudDownloadOutline :size="18" />
-			</template>
-			{{ tbt('Load completed tasks') }}
-		</NcButton>
-
 		<TbTableMenu v-if="menu"
 			:anchor="menu.anchor"
 			:items="menuItems"
@@ -186,33 +194,31 @@ person and due date can be changed directly in the cell.
 
 <script>
 import TaskCheckbox from '../../components/TaskCheckbox.vue'
-import { boardColumn, collectBoardTasks, parentTask, priorityGroup } from '../board.js'
+import { isTaskInList } from '../../store/storeHelper.js'
+import { boardColumn, closedTaskInCollection, collectBoardTasks, isFiltering, parentTask, priorityGroup } from '../board.js'
 import { shortDate } from '../dates.js'
 import { tbt } from '../l10n.js'
 import { sort as tbSort } from '../sort.js'
 import { assigneeOf } from '../assignee.js'
 import { isTaskReadOnly } from '../store/board.js'
 import { handleSelectClick } from '../store/selection.js'
-import { moveColumn, normalizeColumns, shownColumns, storableColumns } from '../table.js'
+import { STATUS } from '../status.js'
+import { moveColumn, normalizeColumns, shownColumns, storableColumns, treeRows } from '../table.js'
 import { isFollowUpDue } from '../waiting.js'
 import TbAvatar from './TbAvatar.vue'
 import TbTableMenu from './TbTableMenu.vue'
 import TbWaitDialog from './TbWaitDialog.vue'
 
+import { getCurrentUser } from '@nextcloud/auth'
 import { showError } from '@nextcloud/dialogs'
 import moment from '@nextcloud/moment'
-import NcButton from '@nextcloud/vue/components/NcButton'
 
 import AccountOffOutline from 'vue-material-design-icons/AccountOffOutline.vue'
 import BellOutline from 'vue-material-design-icons/BellOutline.vue'
 import CalendarRemoveOutline from 'vue-material-design-icons/CalendarRemoveOutline.vue'
 import CalendarToday from 'vue-material-design-icons/CalendarToday.vue'
 import CheckboxMarkedOutline from 'vue-material-design-icons/CheckboxMarkedOutline.vue'
-import CheckCircle from 'vue-material-design-icons/CheckCircle.vue'
-import CircleHalfFull from 'vue-material-design-icons/CircleHalfFull.vue'
-import CircleOutline from 'vue-material-design-icons/CircleOutline.vue'
-import CloseCircleOutline from 'vue-material-design-icons/CloseCircleOutline.vue'
-import CloudDownloadOutline from 'vue-material-design-icons/CloudDownloadOutline.vue'
+import ChevronRight from 'vue-material-design-icons/ChevronRight.vue'
 import MenuDown from 'vue-material-design-icons/MenuDown.vue'
 import MenuUp from 'vue-material-design-icons/MenuUp.vue'
 import NoteTextOutline from 'vue-material-design-icons/NoteTextOutline.vue'
@@ -220,14 +226,6 @@ import TimerSandEmpty from 'vue-material-design-icons/TimerSandEmpty.vue'
 
 import SortableJS from 'sortablejs'
 import { mapGetters } from 'vuex'
-
-const STATUS = {
-	open: { label: 'Open', icon: CircleOutline },
-	inProgress: { label: 'In progress', icon: CircleHalfFull },
-	waiting: { label: 'Waiting', icon: TimerSandEmpty },
-	done: { label: 'Done', icon: CheckCircle },
-	cancelled: { label: 'Cancelled', icon: CloseCircleOutline },
-}
 
 const PRIORITY = {
 	high: { label: 'Important', value: 1 },
@@ -243,10 +241,9 @@ export default {
 	components: {
 		BellOutline,
 		CheckboxMarkedOutline,
-		CloudDownloadOutline,
+		ChevronRight,
 		MenuDown,
 		MenuUp,
-		NcButton,
 		NoteTextOutline,
 		TbAvatar,
 		TbTableMenu,
@@ -272,7 +269,6 @@ export default {
 		return {
 			menu: null,
 			pendingWait: null,
-			loadingCompleted: false,
 			maxHeight: 'none',
 			now: moment(),
 		}
@@ -293,10 +289,19 @@ export default {
 		columns() {
 			return shownColumns(this.allColumns, !this.collectionId)
 		},
-		completedLoaded() {
-			return this.calendars.every(calendar => calendar.loadedCompleted)
+		/**
+		 * Main tasks with their subtasks below them (rows "Main tasks")
+		 *
+		 * @return {boolean}
+		 */
+		tree() {
+			return this.view.cards !== 'all'
+		},
+		filtering() {
+			return isFiltering(this.searchQuery, this.filter)
 		},
 		rows() {
+			const showClosed = this.$store.getters.tbShowClosed
 			let tasks = collectBoardTasks({
 				calendars: this.calendars,
 				collectionId: this.collectionId,
@@ -304,10 +309,26 @@ export default {
 				searchQuery: this.searchQuery,
 				filter: this.filter,
 			})
-			if (!this.view.tableShowClosed) {
+			if (!showClosed) {
 				tasks = tasks.filter(task => !task.closed)
 			}
-			return tbSort(tasks, this.sortOrder, this.sortDirection)
+			const order = list => tbSort(list, this.sortOrder, this.sortDirection)
+			if (!this.tree) {
+				return order(tasks).map(task => ({ task, depth: 0, hasChildren: false, expanded: false, context: false }))
+			}
+			const now = moment()
+			const me = getCurrentUser()?.uid
+			const collectionId = this.collectionId
+			// Subtasks: the same rules as for the main tasks
+			const include = collectionId
+				? task => (task.closed ? showClosed && closedTaskInCollection(task, collectionId, now, me) : isTaskInList(task, collectionId))
+				: task => showClosed || !task.closed
+			return treeRows(order(tasks), {
+				isExpanded: task => this.$store.getters.isTbTableExpanded(task.key),
+				include,
+				order,
+				matches: this.filtering ? task => task.matches(this.searchQuery, this.filter) : null,
+			})
 		},
 		people() {
 			return this.menu?.type === 'assignee' ? this.$store.getters.tbAssigneesFor(this.menu.task.calendar.id) : []
@@ -386,6 +407,9 @@ export default {
 	},
 	methods: {
 		tbt,
+		toggleRow(task) {
+			this.$store.commit('setTbTableExpanded', { keys: [task.key] })
+		},
 		stateOf(task) {
 			return boardColumn(task, this.now)
 		},
@@ -580,16 +604,6 @@ export default {
 				showError(tbt('Could not change the task.'))
 			}
 		},
-		async loadCompleted() {
-			this.loadingCompleted = true
-			try {
-				await Promise.all(this.calendars
-					.filter(calendar => !calendar.loadedCompleted)
-					.map(calendar => this.$store.dispatch('getTasksFromCalendar', { calendar, completed: true, related: null })))
-			} finally {
-				this.loadingCompleted = false
-			}
-		},
 	},
 }
 </script>
@@ -712,6 +726,56 @@ export default {
 		&--closed .tb-table__title {
 			color: var(--color-text-maxcontrast);
 			text-decoration: line-through;
+		}
+
+		// Shown only because a subtask matches the search or filter
+		&--context .tb-table__title {
+			color: var(--color-text-maxcontrast);
+		}
+
+		&--sub .tb-table__title {
+			font-weight: normal;
+		}
+	}
+
+	&__tree {
+		display: flex;
+		flex: 0 0 auto;
+		justify-content: flex-end;
+	}
+
+	&__expand {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 28px;
+		min-height: 0;
+		margin: 0;
+		padding: 0;
+		border: none;
+		border-radius: 6px;
+		background: transparent;
+		color: var(--color-text-maxcontrast);
+		cursor: pointer;
+
+		&:hover:not(:disabled),
+		&:focus-visible {
+			background-color: var(--color-background-hover);
+			color: var(--color-main-text);
+		}
+
+		&:disabled {
+			cursor: default;
+			opacity: .6;
+		}
+
+		:deep(.material-design-icon) {
+			transition: transform 120ms ease;
+		}
+
+		&--open :deep(.material-design-icon) {
+			transform: rotate(90deg);
 		}
 	}
 
@@ -936,10 +1000,6 @@ export default {
 		padding: 24px;
 		color: var(--color-text-maxcontrast);
 		text-align: center;
-	}
-
-	&__load {
-		margin-top: 8px;
 	}
 
 	&__date-pick {

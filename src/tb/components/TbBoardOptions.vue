@@ -5,9 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 <!--
 View options in the header.
-Table: columns (for all lists), rows, completed tasks.
+Table: columns (for all lists), rows, open/close all subtasks.
 List: style (cards, rows, compact) for all lists, open/close all subtasks.
-Board: which cards, rows, order in the columns, cancelled tasks (per list).
+Board: which cards, rows, order in the columns (per list).
+Completed and cancelled tasks: own button in the header (TbClosedToggle).
 -->
 <template>
 	<NcActions v-if="isTable"
@@ -46,10 +47,22 @@ Board: which cards, rows, order in the columns, cancelled tasks (per list).
 			@update:model-value="setView({ cards: 'all' })">
 			{{ tbt('All tasks incl. subtasks') }}
 		</NcActionRadio>
-		<NcActionCheckbox :model-value="view.tableShowClosed"
-			@update:model-value="setView({ tableShowClosed: $event })">
-			{{ tbt('Show completed and cancelled tasks') }}
-		</NcActionCheckbox>
+		<template v-if="view.cards !== 'all'">
+			<NcActionSeparator />
+			<NcActionCaption :name="tbt('Subtasks')" />
+			<NcActionButton :close-after-click="true" @click="expandAllRows">
+				<template #icon>
+					<UnfoldMoreHorizontal :size="20" />
+				</template>
+				{{ tbt('Open all') }}
+			</NcActionButton>
+			<NcActionButton :close-after-click="true" @click="collapseAllRows">
+				<template #icon>
+					<UnfoldLessHorizontal :size="20" />
+				</template>
+				{{ tbt('Close all') }}
+			</NcActionButton>
+		</template>
 	</NcActions>
 	<NcActions v-else-if="!isBoard"
 		class="tb-board-options tb-view-options"
@@ -129,11 +142,6 @@ Board: which cards, rows, order in the columns, cancelled tasks (per list).
 			@update:model-value="setView({ boardOrder: 'manual' })">
 			{{ tbt('By hand (drag cards)') }}
 		</NcActionRadio>
-		<NcActionSeparator />
-		<NcActionCheckbox :model-value="view.showCancelled"
-			@update:model-value="setView({ showCancelled: $event })">
-			{{ tbt('Show cancelled tasks') }}
-		</NcActionCheckbox>
 	</NcActions>
 </template>
 
@@ -224,10 +232,15 @@ export default {
 		setListStyle(listStyle) {
 			this.$store.dispatch('setTbPrefs', { listStyle })
 		},
-		/** Tasks with subtasks in all loaded lists */
-		parentKeys() {
+		/**
+		 * Tasks with subtasks
+		 *
+		 * @param {Array} calendars The lists, all loaded lists by default
+		 * @return {string[]} Their keys
+		 */
+		parentKeys(calendars = this.$store.getters.getSortedCalendars) {
 			const keys = []
-			for (const calendar of this.$store.getters.getSortedCalendars) {
+			for (const calendar of calendars) {
 				for (const task of Object.values(calendar.tasks)) {
 					if (Object.keys(task.subTasks || {}).length) {
 						keys.push(task.key)
@@ -241,6 +254,14 @@ export default {
 		},
 		collapseAll() {
 			this.$store.commit('setTbCollapsed', { keys: this.parentKeys(), collapsed: true })
+		},
+		expandAllRows() {
+			const calendar = this.$route.params.calendarId ? this.$store.getters.getCalendarByRoute(this.$route) : null
+			const keys = this.parentKeys(calendar ? [calendar] : undefined)
+			this.$store.commit('setTbTableExpanded', { keys, expanded: true })
+		},
+		collapseAllRows() {
+			this.$store.commit('setTbTableExpanded', { keys: Object.keys(this.$store.state.tbBoard.tableExpanded), expanded: false })
 		},
 	},
 }

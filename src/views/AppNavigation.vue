@@ -22,39 +22,50 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 <template>
 	<NcAppNavigation>
 		<template #list>
-			<!-- Tasks Board: dashboard -->
-			<NcAppNavigationItem id="tb-dashboard"
-				:to="{ name: 'dashboard' }"
-				:name="tbt('Dashboard')"
-				class="collection reactive tb-nav-dashboard"
-				@click="setInitialRoute('/dashboard')">
-				<template #icon>
-					<ViewDashboardOutline :size="20" />
+			<!-- Tasks Board: dashboard and collections in the order of the person, sortable by dragging -->
+			<Sortable class="draggable-container tb-nav-collections"
+				:list="tbNavEntries"
+				item-key="id"
+				:options="tbNavSortOptions"
+				@choose="tbNavChoose"
+				@update="tbNavUpdate">
+				<template #item="{ element }">
+					<NcAppNavigationItem v-if="element.id === 'dashboard'"
+						id="tb-dashboard"
+						:to="{ name: 'dashboard' }"
+						:name="tbt('Dashboard')"
+						:data-tb-nav="element.id"
+						class="collection reactive tb-nav-dashboard"
+						@click="setInitialRoute('/dashboard')">
+						<template #icon>
+							<ViewDashboardOutline :size="20" />
+						</template>
+					</NcAppNavigationItem>
+					<NcAppNavigationItem v-else
+						v-show="!hideCollection(element.collection)"
+						:id="'collection_' + element.id"
+						:collection-id="element.id"
+						:data-tb-nav="element.id"
+						:to="{ name: 'collections', params: { collectionId: element.id } }"
+						:name="element.collection.displayName"
+						class="collection reactive"
+						draggable="false"
+						@dragstart="dragStart"
+						@drop="(e) => dropTaskOnCollection(e, element.collection)"
+						@dragover="dragOver"
+						@dragenter="(e) => dragEnter(e, element.collection)"
+						@dragleave="dragLeave"
+						@click="setInitialRoute(`/collections/${element.id}`)">
+						<template #icon>
+							<component :is="element.collection.icon"
+								:size="20" />
+						</template>
+						<template #counter>
+							<NcCounterBubble v-show="collectionCount(element.id)" :count="collectionCount(element.id)" />
+						</template>
+					</NcAppNavigationItem>
 				</template>
-			</NcAppNavigationItem>
-			<NcAppNavigationItem v-for="collection in collections"
-				v-show="!hideCollection(collection)"
-				:id="'collection_' + collection.id"
-				:key="collection.id"
-				:collection-id="collection.id"
-				:to="{ name: 'collections', params: { collectionId: collection.id } }"
-				:name="collection.displayName"
-				class="collection reactive"
-				draggable="false"
-				@dragstart="dragStart"
-				@drop="(e) => dropTaskOnCollection(e, collection)"
-				@dragover="dragOver"
-				@dragenter="(e) => dragEnter(e, collection)"
-				@dragleave="dragLeave"
-				@click="setInitialRoute(`/collections/${collection.id}`)">
-				<template #icon>
-					<component :is="collection.icon"
-						:size="20" />
-				</template>
-				<template #counter>
-					<NcCounterBubble v-show="collectionCount(collection.id)" :count="collectionCount(collection.id)" />
-				</template>
-			</NcAppNavigationItem>
+			</Sortable>
 			<Sortable class="draggable-container"
 				:list="calendars"
 				item-key="id"
@@ -92,6 +103,15 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					</div>
 				</li>
 			</NcAppNavigationItem>
+			<!-- Tasks Board: new list that is shared with a group right away -->
+			<NcAppNavigationItem :name="tbt('Add list for a group…')"
+				class="collection reactive tb-nav-group-list"
+				@click="tbGroupDialog = true">
+				<template #icon>
+					<AccountGroupOutline :size="20" />
+				</template>
+			</NcAppNavigationItem>
+			<TbGroupListDialog v-if="tbGroupDialog" @close="tbGroupDialog = false" />
 			<Trashbin v-if="hasTrashBin" />
 		</template>
 		<template #footer>
@@ -107,8 +127,10 @@ import ListItemCalendar from '../components/AppNavigation/ListItemCalendar.vue'
 import Colorpicker from '../components/AppNavigation/Colorpicker.vue'
 import AppNavigationSettings from '../components/AppNavigation/AppNavigationSettings.vue'
 import Trashbin from '../components/AppNavigation/Trashbin.vue'
+import TbGroupListDialog from '../tb/components/TbGroupListDialog.vue'
 import TbNavResizer from '../tb/components/TbNavResizer.vue'
 import { tbt } from '../tb/l10n.js'
+import { moveEntry } from '../tb/navigation.js'
 
 import { showError } from '@nextcloud/dialogs'
 import { translate as t } from '@nextcloud/l10n'
@@ -119,6 +141,7 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 
 // Tasks Board: icon of the collection "Assigned to me"
 import AccountCheckOutline from 'vue-material-design-icons/AccountCheckOutline.vue'
+import AccountGroupOutline from 'vue-material-design-icons/AccountGroupOutline.vue'
 import BellAlertOutline from 'vue-material-design-icons/BellAlertOutline.vue'
 import TimerSandEmpty from 'vue-material-design-icons/TimerSandEmpty.vue'
 import CalendarToday from 'vue-material-design-icons/CalendarToday.vue'
@@ -144,10 +167,12 @@ export default {
 		NcCounterBubble,
 		NcTextField,
 		AppNavigationSettings,
+		TbGroupListDialog,
 		TbNavResizer,
 		ViewDashboardOutline,
 		Sortable,
 		AccountCheckOutline,
+		AccountGroupOutline,
 		BellAlertOutline,
 		TimerSandEmpty,
 		CalendarToday,
@@ -172,12 +197,26 @@ export default {
 			nameError: false,
 			newCalendarName: '',
 			selectedColor: '',
+			tbGroupDialog: false,
 		}
 	},
 	computed: {
 		...mapState({
 			collections: state => state.collections.collections,
 		}),
+		/**
+		 * Tasks Board: the dashboard and the collections in the stored order
+		 *
+		 * @return {Array} { id, collection }
+		 */
+		tbNavEntries() {
+			const byId = Object.fromEntries(this.collections.map(collection => [collection.id, collection]))
+			return this.$store.getters.tbNavigationOrder.map(id => ({ id, collection: byId[id] || null }))
+		},
+		tbNavSortOptions() {
+			// Mouse events instead of HTML drag and drop: the collections are drop targets for tasks
+			return { forceFallback: true, fallbackTolerance: 6, delay: 500, delayOnTouchOnly: true, touchStartThreshold: 3 }
+		},
 		...mapGetters({
 			calendars: 'getSortedCalendars',
 			collectionCount: 'getCollectionCount',
@@ -363,6 +402,29 @@ export default {
 					break
 				}
 			}
+		},
+		/**
+		 * Tasks Board: remembers where the dragged entry was
+		 *
+		 * @param {object} $event The SortableJS event
+		 */
+		tbNavChoose($event) {
+			this.tbNavOrigin = { item: $event.item, parent: $event.item.parentNode, next: $event.item.nextSibling }
+		},
+		/**
+		 * Tasks Board: stores the new order of the dashboard and the collections.
+		 * The DOM change of SortableJS is reverted first, the store change renders the new order.
+		 *
+		 * @param {object} $event The SortableJS event
+		 */
+		tbNavUpdate($event) {
+			const origin = this.tbNavOrigin
+			this.tbNavOrigin = null
+			if (origin && origin.item === $event.item && origin.parent) {
+				origin.parent.insertBefore($event.item, origin.next && origin.next.parentNode === origin.parent ? origin.next : null)
+			}
+			const order = this.tbNavEntries.map(entry => entry.id)
+			this.$store.dispatch('setTbNavigationOrder', moveEntry(order, $event.oldIndex, $event.newIndex))
 		},
 		hideCollection(collection) {
 			switch (collection.show) {

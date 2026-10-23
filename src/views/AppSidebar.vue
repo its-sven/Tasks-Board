@@ -179,13 +179,8 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 			<div>
 				<!-- Tasks Board: fields in groups, rarely used ones under "More fields" -->
 				<div v-if="!readOnly || task.status || task.priority || task.complete || task.completed" class="tb-group tb-group--status" :data-title="tbt('Status')">
-					<MultiselectItem v-show="!readOnly || task.status"
-						:value="statusOptions.find( _ => _.type === task.status )"
-						:options="statusOptions"
-						:disabled="readOnly"
-						:placeholder="t('tasks', 'Select a status')"
-						icon="IconPulse"
-						@change-value="changeStatus" />
+					<!-- Tasks Board: the five states of the board instead of the iCalendar status -->
+					<TbStatusItem :task="task" :disabled="readOnly" />
 					<DateTimePickerItem v-show="task.completed"
 						:date="task.completedDateMoment"
 						:value="newCompletedDate"
@@ -326,6 +321,7 @@ import TextItem from '../components/AppSidebar/TextItem.vue'
 import NotesItem from '../tb/components/TbNotesItem.vue'
 import TbAssigneeItem from '../tb/components/TbAssigneeItem.vue'
 import TbSidebarResizer from '../tb/components/TbSidebarResizer.vue'
+import TbStatusItem from '../tb/components/TbStatusItem.vue'
 import TbTagListHint from '../tb/components/TbTagListHint.vue'
 import { tbt } from '../tb/l10n.js'
 import { tagOptions } from '../tb/taglist.js'
@@ -412,6 +408,7 @@ export default {
 		NotesItem,
 		TbAssigneeItem,
 		TbSidebarResizer,
+		TbStatusItem,
 		TbTagListHint,
 		TaskCheckbox,
 	},
@@ -546,43 +543,6 @@ export default {
 				})
 			}
 			return ''
-		},
-		statusOptions() {
-			const statusOptions = [
-				{
-					displayName: t('tasks', 'Needs action'),
-					type: 'NEEDS-ACTION',
-					icon: 'IconAlertBoxOutline',
-					optionClass: 'active',
-				},
-				{
-					displayName: t('tasks', 'Completed'),
-					type: 'COMPLETED',
-					icon: 'IconCheck',
-					optionClass: 'active',
-				},
-				{
-					displayName: t('tasks', 'In process'),
-					type: 'IN-PROCESS',
-					icon: 'IconTrendingUp',
-					optionClass: 'active',
-				},
-				{
-					displayName: t('tasks', 'Canceled'),
-					type: 'CANCELLED',
-					icon: 'IconCancel',
-					optionClass: 'active',
-				},
-			]
-			if (this.task.status) {
-				return statusOptions.concat([{
-					displayName: t('tasks', 'Clear status'),
-					type: null,
-					icon: 'IconDelete',
-					optionClass: 'center',
-				}])
-			}
-			return statusOptions
 		},
 		/**
 		 * Returns the download url as a string or null if event is loading or does not exist on the server (yet)
@@ -822,7 +782,6 @@ export default {
 			'toggleAllDay',
 			'moveTask',
 			'setClassification',
-			'setStatus',
 			'getTaskByUri',
 			'togglePinned',
 			'removeRecurrenceRule',
@@ -962,10 +921,6 @@ export default {
 
 		changeClass(classification) {
 			this.setClassification({ task: this.task, classification: classification.type })
-		},
-
-		changeStatus(status) {
-			this.setStatus({ task: this.task, status: status.type })
 		},
 
 		/**

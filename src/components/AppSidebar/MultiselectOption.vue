@@ -41,8 +41,9 @@ export default {
 			type: String,
 			required: true,
 		},
+		// Tasks Board: also an icon component (status options)
 		icon: {
-			type: String,
+			type: [String, Object],
 			default: null,
 		},
 		optionClass: {

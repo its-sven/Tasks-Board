@@ -22,7 +22,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 					<header class="tb-board__column-header">
 						<span class="tb-board__dot" />
 						<span class="tb-board__column-title">{{ columnTitle(column) }}</span>
-						<span class="tb-board__count">{{ lane.columns[column].length }}</span>
+						<span v-if="column !== 'done' || showClosed" class="tb-board__count">{{ lane.columns[column].length }}</span>
 						<NcButton v-if="canAdd(lane, column)"
 							class="tb-board__add-button"
 							variant="tertiary"
@@ -49,21 +49,16 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 							@blur="onAddBlur">
 					</form>
 					<template v-if="column === 'done'">
-						<p v-if="collectionId" class="tb-board__hint">
+						<!-- Hidden completed tasks: the column stays, so tasks can still be dropped here -->
+						<p v-if="!showClosed" class="tb-board__hint tb-board__hint--hidden">
+							<span>{{ tbt('Completed tasks are hidden.') }}</span>
+							<button type="button" class="tb-board__show-closed" @click="showClosedTasks">
+								{{ tbt('Show') }}
+							</button>
+						</p>
+						<p v-else-if="collectionId" class="tb-board__hint">
 							{{ tbt('Completed tasks of the last {days} days', { days: recentDays }) }}
 						</p>
-						<NcButton v-if="!completedLoaded"
-							class="tb-board__load"
-							variant="tertiary"
-							size="small"
-							wide
-							:disabled="loadingCompleted"
-							@click="loadCompleted">
-							<template #icon>
-								<CloudDownloadOutline :size="18" />
-							</template>
-							{{ tbt('Load completed tasks') }}
-						</NcButton>
 					</template>
 					<Sortable tag="ol"
 						class="tb-board__cards"
@@ -130,7 +125,6 @@ import { showError } from '@nextcloud/dialogs'
 import moment from '@nextcloud/moment'
 import NcButton from '@nextcloud/vue/components/NcButton'
 
-import CloudDownloadOutline from 'vue-material-design-icons/CloudDownloadOutline.vue'
 import Plus from 'vue-material-design-icons/Plus.vue'
 
 import { Sortable } from 'sortablejs-vue3'
@@ -141,7 +135,6 @@ const LIMITED_COLUMNS = ['done', 'cancelled']
 export default {
 	name: 'TbBoard',
 	components: {
-		CloudDownloadOutline,
 		NcButton,
 		TbAvatar,
 		TbBoardCard,
@@ -169,7 +162,6 @@ export default {
 	data() {
 		return {
 			pendingWait: null,
-			loadingCompleted: false,
 			adding: null,
 			addingBusy: false,
 			newSummary: '',
@@ -191,28 +183,35 @@ export default {
 		lanes() {
 			return effectiveLanes(this.view)
 		},
-		columns() {
-			return COLUMNS.filter(column => this.view.showCancelled || column !== 'cancelled')
+		showClosed() {
+			return this.$store.getters.tbShowClosed
 		},
-		completedLoaded() {
-			return this.calendars.every(calendar => calendar.loadedCompleted)
+		/**
+		 * The column "Cancelled" only with the completed tasks shown and when it has cards
+		 *
+		 * @return {string[]}
+		 */
+		columns() {
+			const cancelled = this.showClosed && this.tasks.some(task => task.status === 'CANCELLED')
+			return COLUMNS.filter(column => column !== 'cancelled' || cancelled)
 		},
 		showCalendar() {
 			return !!this.collectionId && this.lanes !== 'calendar'
 		},
 		tasks() {
-			return collectBoardTasks({
+			const tasks = collectBoardTasks({
 				calendars: this.calendars,
 				collectionId: this.collectionId,
 				cards: this.view.cards,
 				searchQuery: this.searchQuery,
 				filter: this.filter,
 			})
+			return this.showClosed ? tasks : tasks.filter(task => !task.closed)
 		},
 		board() {
 			return buildBoard(this.tasks, {
 				lanes: this.lanes,
-				showCancelled: this.view.showCancelled,
+				showCancelled: this.showClosed,
 				calendars: this.calendars,
 				// The cards can also be put in order by hand
 				sortOrder: this.manualOrder ? 'manual' : this.sortOrder,
@@ -484,15 +483,8 @@ export default {
 				showError(tbt('Could not move the task.'))
 			}
 		},
-		async loadCompleted() {
-			this.loadingCompleted = true
-			try {
-				await Promise.all(this.calendars
-					.filter(calendar => !calendar.loadedCompleted)
-					.map(calendar => this.$store.dispatch('getTasksFromCalendar', { calendar, completed: true, related: null })))
-			} finally {
-				this.loadingCompleted = false
-			}
+		showClosedTasks() {
+			this.$store.dispatch('setTbShowClosed', true)
 		},
 		toggleCompleted(task) {
 			this.$store.dispatch('toggleCompleted', task)
@@ -524,8 +516,28 @@ export default {
 		margin: 0 4px 6px;
 	}
 
-	&__load {
-		margin-bottom: 6px;
+	&__hint--hidden {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 4px;
+	}
+
+	&__show-closed {
+		min-height: 0;
+		margin: 0;
+		padding: 0;
+		border: none;
+		background: none;
+		color: var(--color-primary-element);
+		font-size: inherit;
+		font-weight: 600;
+		cursor: pointer;
+
+		&:hover,
+		&:focus-visible {
+			text-decoration: underline;
+		}
 	}
 
 	&__lane {
@@ -588,8 +600,11 @@ export default {
 			--tb-column-color: var(--tb-status-done, #2e9e5b);
 		}
 
+		// Rarely used: narrower, so five columns fit more often
 		&--cancelled {
 			--tb-column-color: var(--tb-status-cancelled, #9aa0a6);
+			flex-basis: 200px;
+			max-width: 320px;
 		}
 	}
 

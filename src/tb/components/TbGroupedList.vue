@@ -30,7 +30,7 @@ except dragging between groups (switched off, the groups come from the task data
 				{{ tbt('No tasks') }}
 			</p>
 
-			<!-- Completed tasks of a single list, as in the upstream list -->
+			<!-- Completed tasks of a single list, as in the upstream list (loaded by the header button) -->
 			<div v-if="calendar" class="grouped-tasks">
 				<NcButton v-if="closedCount(calendar.id)"
 					alignment="center-reverse"
@@ -49,7 +49,6 @@ except dragging between groups (switched off, the groups come from the task data
 					:disabled="calendar.readOnly"
 					class="completed"
 					collection-id="completed" />
-				<LoadCompletedButton :calendars="[calendar]" />
 				<DeleteCompletedModal v-if="calendar.loadedCompleted && !calendar.readOnly" :calendar="calendar" />
 			</div>
 			<LoadCompletedButton v-else-if="collectionId === 'completed'" :calendars="calendars" />

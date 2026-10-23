@@ -97,7 +97,7 @@ class CollectionsServiceTest extends TestCase {
 				'icon' => 'TrendingUp'],
 			[
 				'id' => "completed",
-				'displayName' => 'Completed',
+				'displayName' => 'Done',
 				'show' => 2,
 				'icon' => 'Check']
 		];

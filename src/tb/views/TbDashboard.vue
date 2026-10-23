@@ -33,7 +33,7 @@ everything below them. A click on a task opens it in the sidebar.
 					:multiple="true"
 					:limit="2"
 					:no-wrap="true"
-					:close-on-select="false"
+					:keep-open="true"
 					:label-outside="true"
 					:placeholder="tbt('All lists')"
 					@update:model-value="setFilter({ dashCalendars: $event.map(calendar => calendar.id), dashProject: null })">
@@ -70,7 +70,7 @@ everything below them. A click on a task opens it in the sidebar.
 					:multiple="true"
 					:limit="2"
 					:no-wrap="true"
-					:close-on-select="false"
+					:keep-open="true"
 					:label-outside="true"
 					:placeholder="tbt('Everyone')"
 					@update:model-value="setFilter({ dashPeople: $event.map(person => person.uid) })" />
@@ -85,7 +85,7 @@ everything below them. A click on a task opens it in the sidebar.
 					:multiple="true"
 					:limit="2"
 					:no-wrap="true"
-					:close-on-select="false"
+					:keep-open="true"
 					:label-outside="true"
 					:placeholder="tbt('All tags')"
 					@update:model-value="setFilter({ dashTags: $event })" />

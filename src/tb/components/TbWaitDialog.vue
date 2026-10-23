@@ -17,7 +17,8 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 			v-model="date"
 			type="date"
 			:min="tomorrow"
-			:label="tbt('Wait until')" />
+			:label="tbt('Wait until')"
+			@keydown.esc="finish(false)" />
 		<div class="tb-wait-dialog__quick">
 			<NcButton v-for="quick in quickPicks"
 				:key="quick.label"

@@ -26,6 +26,8 @@ export const DEFAULT_PREFS = Object.freeze({
 	templateCalendarId: '',
 	// View: list style 'cards', 'rows' or 'compact'
 	listStyle: 'cards',
+	// Navigation: order of the dashboard and the collections (null = default)
+	collectionOrder: null,
 })
 
 /**

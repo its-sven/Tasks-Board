@@ -108,9 +108,10 @@ class CollectionsService {
 				'displayName' => (string)$this->l10n->t('Current'),
 				'show' => 2,
 				'icon' => 'TrendingUp'],
+			// Tasks Board: named like the board column
 			[
 				'id' => "completed",
-				'displayName' => (string)$this->l10n->t('Completed'),
+				'displayName' => $this->doneName(),
 				'show' => 2,
 				'icon' => 'Check']
 		];
@@ -123,6 +124,22 @@ class CollectionsService {
 			}
 		}
 		return $collections;
+	}
+
+	/**
+	 * Tasks Board: name of the collection with the completed tasks, like the board column
+	 *
+	 * @return string
+	 */
+	private function doneName():string {
+		$language = $this->l10n->getLanguageCode();
+		if (str_starts_with($language, 'de')) {
+			return 'Erledigt';
+		}
+		if (str_starts_with($language, 'en')) {
+			return 'Done';
+		}
+		return (string)$this->l10n->t('Completed');
 	}
 
 	/**

@@ -79,6 +79,16 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 				</template>
 				{{ t('tasks', 'Export') }}
 			</NcActionLink>
+			<!-- Tasks Board: import tasks from an .ics file (e.g. an export) -->
+			<NcActionButton v-if="!calendar.readOnly"
+				class="tb-import-tasks"
+				:close-after-click="true"
+				@click="tbImport">
+				<template #icon>
+					<Upload :size="20" />
+				</template>
+				{{ tbt('Import tasks…') }}
+			</NcActionButton>
 			<NcActionButton v-if="!calendar.readOnly || calendar.isSharedWithMe"
 				:title="deleteMessage"
 				@click="scheduleDelete">
@@ -126,6 +136,8 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 <script>
 import Colorpicker from './Colorpicker.vue'
 import ShareCalendar from './CalendarShare.vue'
+import { pickAndImport } from '../../tb/import.js'
+import { tbt } from '../../tb/l10n.js'
 
 import { showSuccess, showError } from '@nextcloud/dialogs'
 import { translate as t, translatePlural as n } from '@nextcloud/l10n'
@@ -146,6 +158,7 @@ import LinkVariant from 'vue-material-design-icons/Link.vue'
 import Pencil from 'vue-material-design-icons/PencilOutline.vue'
 import ShareVariant from 'vue-material-design-icons/ShareVariantOutline.vue'
 import Undo from 'vue-material-design-icons/Undo.vue'
+import Upload from 'vue-material-design-icons/TrayArrowUp.vue'
 
 import { vOnClickOutside as ClickOutside } from '@vueuse/components'
 import { mapGetters, mapActions } from 'vuex'
@@ -171,6 +184,7 @@ export default {
 		Pencil,
 		ShareVariant,
 		Undo,
+		Upload,
 	},
 	directives: {
 		ClickOutside,
@@ -279,6 +293,13 @@ export default {
 	},
 	methods: {
 		t,
+		tbt,
+		/**
+		 * Tasks Board: imports the tasks of an .ics file into this list
+		 */
+		tbImport() {
+			pickAndImport(this.$store, this.calendar, { showSuccess, showError, tbt })
+		},
 
 		...mapActions([
 			'changeCalendar',

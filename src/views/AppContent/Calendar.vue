@@ -47,7 +47,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					:disabled="calendar.readOnly"
 					class="completed"
 					collection-id="completed" />
-				<LoadCompletedButton :calendars="[calendar]" />
+				<!-- Tasks Board: the completed tasks are loaded when they are shown (button in the header) -->
 				<DeleteCompletedModal v-if="calendar.loadedCompleted && !calendar.readOnly" :calendar="calendar" />
 			</div>
 		</div>
@@ -57,7 +57,6 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 <script>
 import HeaderBar from '../../components/HeaderBar.vue'
 import DeleteCompletedModal from '../../components/DeleteCompletedModal.vue'
-import LoadCompletedButton from '../../components/LoadCompletedButton.vue'
 import TaskDragContainer from '../../components/TaskDragContainer.vue'
 import './task-list.scss'
 
@@ -73,7 +72,6 @@ import { mapGetters } from 'vuex'
 export default {
 	components: {
 		HeaderBar,
-		LoadCompletedButton,
 		TaskDragContainer,
 		DeleteCompletedModal,
 		NcButton,

@@ -1,7 +1,7 @@
 {
   "name": "tasks-board",
   "description": "Tasks Board - tasks with board, table and dashboard for Nextcloud (based on Nextcloud Tasks)",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "author": {
     "name": "Raimund Schlüßler",
     "email": "raimund.schluessler@mailbox.org"

@@ -76,7 +76,7 @@ describe('new tasks', () => {
 	})
 
 	it('parses preferences safely', () => {
-		const defaults = { autoProgress: true, inheritFromParent: true, notifyAssigned: true, notifyCompleted: true, notifyFollowUp: true, notifyDue: true, templateCalendarId: '', listStyle: 'cards' }
+		const defaults = { autoProgress: true, inheritFromParent: true, notifyAssigned: true, notifyCompleted: true, notifyFollowUp: true, notifyDue: true, templateCalendarId: '', listStyle: 'cards', collectionOrder: null }
 		expect(parsePrefs('kaputt')).toEqual(defaults)
 		expect(parsePrefs({ autoProgress: false })).toEqual({ ...defaults, autoProgress: false })
 		expect(parsePrefs('{"notifyCompleted":false}')).toEqual({ ...defaults, notifyCompleted: false })

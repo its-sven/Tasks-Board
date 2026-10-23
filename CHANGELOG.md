@@ -1,3 +1,24 @@
+## 1.1.0 - 2026-10-23
+
+### Added
+- Live updates: changes by other people, from other windows and from CalDAV clients show up without reloading (WebDAV sync every 30 seconds while the page is visible, right away when the window gets the focus, and immediately between tabs of the same browser). A task that is being edited is updated as soon as you leave the field
+- New list for a group: creates a list and shares it with a group in one step, with or without edit rights
+- Import of tasks from an iCalendar file (.ics) in the menu of a list, for example the export of another list. All properties are kept (person, tags, subtasks, order, reminders); tasks that are already in the list are skipped
+- Table as a tree: main tasks with an arrow and their subtasks indented below them, over several levels. Each level opens on its own, the table settings have "Open all" and "Close all", and while searching or filtering the way to the matches is open
+- Order of the dashboard and the collections in the navigation: drag them, or use the arrows in the settings
+- One button in the header shows or hides completed and cancelled tasks in list, board and table, for each person. Switching it on loads the completed tasks of the shown lists
+
+### Changed
+- The status in the sidebar has the five states of the board: Open, In progress, Waiting (asks for the follow-up date), Done and Cancelled
+- The collection "Completed" is called "Done" (German "Erledigt")
+- Tag menus (sidebar, dashboard filters, multi-select) stay open, so several tags can be picked one after the other
+- With completed tasks hidden the board keeps the Done column, tasks can still be dropped there; the Cancelled column appears together with the completed tasks
+- The new button replaces the options "Show cancelled tasks" (board) and "Show completed and cancelled tasks" (table) and the buttons that loaded completed tasks
+
+### Fixed
+- The follow-up dialog closes with Escape
+- Icons of the collections "Assigned to me", "Follow-up due" and "Waiting" in the settings
+
 ## 1.0.1 - 2026-10-23
 
 ### Fixed

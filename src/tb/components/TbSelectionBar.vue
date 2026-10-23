@@ -91,7 +91,7 @@ actions for all selected tasks at once.
 				</NcActionInput>
 				<NcActionButton v-for="tag in tagsToAdd"
 					:key="'add-' + tag"
-					:close-after-click="true"
+					:close-after-click="false"
 					@click="run('addTag', tag)">
 					<template #icon>
 						<Plus :size="20" />
@@ -103,7 +103,7 @@ actions for all selected tasks at once.
 					<NcActionCaption :name="tbt('Remove')" />
 					<NcActionButton v-for="tag in tagsToRemove"
 						:key="'remove-' + tag"
-						:close-after-click="true"
+						:close-after-click="false"
 						@click="run('removeTag', tag)">
 						<template #icon>
 							<Minus :size="20" />

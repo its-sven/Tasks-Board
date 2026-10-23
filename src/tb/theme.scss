@@ -700,6 +700,31 @@ $breakpoint-mobile: 1024px;
 		}
 	}
 
+	// Status in the sidebar: icon in the colour of the state, text like the other fields
+	.multiselect-picker-option.tb-status-option {
+		color: var(--color-main-text);
+
+		.multiselect-picker-option__icon {
+			color: var(--tb-status-open);
+		}
+
+		&--inProgress .multiselect-picker-option__icon {
+			color: var(--tb-status-progress);
+		}
+
+		&--waiting .multiselect-picker-option__icon {
+			color: var(--tb-status-waiting);
+		}
+
+		&--done .multiselect-picker-option__icon {
+			color: var(--tb-status-done);
+		}
+
+		&--cancelled .multiselect-picker-option__icon {
+			color: var(--tb-status-cancelled);
+		}
+	}
+
 	.app-sidebar-header__description .tb-group:first-child {
 		margin-top: 18px;
 	}

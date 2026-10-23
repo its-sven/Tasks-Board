@@ -3,8 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
+import Task from '../../models/task.js'
 import Requests from '../../services/requests.js'
 import { waitingTag, isWaitingTagName, hasWaitingTag, startsInFuture, parseViews, patchViews, viewFor } from '../board.js'
+import { findVTODObyState } from '../../store/cdav-requests.js'
+import { splitTasks, uidOf } from '../import.js'
+import { orderedEntries } from '../navigation.js'
 import { parsePrefs } from '../progress.js'
 import { sortKeyForRoute } from '../sort.js'
 
@@ -21,6 +25,7 @@ export function isTaskReadOnly(task) {
 
 const EXPANDED_STORAGE_KEY = 'tasks_board.expandedCards'
 const COLLAPSED_STORAGE_KEY = 'tasks_board.collapsedTasks'
+const TABLE_EXPANDED_STORAGE_KEY = 'tasks_board.tableExpanded'
 const KEYS_LIMIT = 300
 
 /**
@@ -74,21 +79,31 @@ const state = {
 	expandedCards: loadKeys(EXPANDED_STORAGE_KEY),
 	/** List rows with closed subtasks (task.key => true) */
 	collapsedTasks: loadKeys(COLLAPSED_STORAGE_KEY),
+	/** Table rows with opened subtasks (task.key => true) */
+	tableExpanded: loadKeys(TABLE_EXPANDED_STORAGE_KEY),
 	/** Target list for new tasks chosen in a single list view (only until reload) */
 	targetOverrides: {},
 }
 
 const mutations = {
 	/**
-	 * Opens or closes the subtasks of a board card
+	 * Remembers the target list chosen in a single list view
 	 *
 	 * @param {object} state The module state
-	 * @param {string} key The key of the task
+	 * @param {object} data Destructuring object
+	 * @param {string} data.key The key of the view
+	 * @param {string} data.calendarId The chosen list
 	 */
 	setTbTargetOverride(state, { key, calendarId }) {
 		state.targetOverrides = { ...state.targetOverrides, [key]: calendarId }
 	},
 
+	/**
+	 * Opens or closes the subtasks of a board card
+	 *
+	 * @param {object} state The module state
+	 * @param {string} key The key of the task
+	 */
 	toggleTbCardExpanded(state, key) {
 		state.expandedCards = switchKey(state.expandedCards, key)
 		saveKeys(EXPANDED_STORAGE_KEY, state.expandedCards)
@@ -109,6 +124,23 @@ const mutations = {
 		}
 		state.collapsedTasks = result
 		saveKeys(COLLAPSED_STORAGE_KEY, result)
+	},
+
+	/**
+	 * Opens or closes the subtasks of table rows
+	 *
+	 * @param {object} state The module state
+	 * @param {object} data Destructuring object
+	 * @param {string[]} data.keys The keys of the tasks
+	 * @param {boolean|null} data.expanded New state, null = toggle
+	 */
+	setTbTableExpanded(state, { keys, expanded = null }) {
+		let result = state.tableExpanded
+		for (const key of keys) {
+			result = switchKey(result, key, expanded)
+		}
+		state.tableExpanded = result
+		saveKeys(TABLE_EXPANDED_STORAGE_KEY, result)
 	},
 
 	/**
@@ -135,6 +167,17 @@ async function saveSetting(type, value) {
 }
 
 const getters = {
+	/**
+	 * Whether completed and cancelled tasks are shown (list, board and table).
+	 * Stored in the setting of the Tasks app that shows the completed tasks of a list.
+	 *
+	 * @param {object} state The module state
+	 * @param {object} getters The getters
+	 * @param {object} rootState The root state
+	 * @return {boolean}
+	 */
+	tbShowClosed: (state, getters, rootState) => !!rootState.settings.settings.showHidden,
+
 	/**
 	 * All stored board/list view settings
 	 *
@@ -206,6 +249,17 @@ const getters = {
 	isTbCollapsed: (state) => (key) => !!state.collapsedTasks[key],
 
 	/**
+	 * The dashboard and the collections in the order of the navigation
+	 *
+	 * @param {object} state The module state
+	 * @param {object} getters The getters
+	 * @param {object} rootState The root state
+	 * @return {string[]} 'dashboard' and the collection ids
+	 */
+	tbNavigationOrder: (state, getters, rootState) => orderedEntries(rootState.collections.collections.map(collection => collection.id), getters.tbPrefs.collectionOrder),
+	isTbTableExpanded: (state) => (key) => !!state.tableExpanded[key],
+
+	/**
 	 * The list new tasks from the header input go to.
 	 * Collections remember the choice (stored with the view settings),
 	 * a single list only until reload; default is the list itself or the default list.
@@ -251,6 +305,18 @@ export function tbUiPlugin(store) {
 }
 
 const actions = {
+	/**
+	 * Shows or hides completed and cancelled tasks
+	 *
+	 * @param {object} context The store context
+	 * @param {Function} context.dispatch Dispatches an action
+	 * @param {boolean} show Whether to show them
+	 * @return {Promise}
+	 */
+	setTbShowClosed({ dispatch }, show) {
+		return dispatch('setSetting', { type: 'showHidden', value: show ? 1 : 0 })
+	},
+
 	/**
 	 * Ends waiting: removes the waiting tag and a start date in the future, keeps the status
 	 *
@@ -338,6 +404,80 @@ const actions = {
 			return
 		}
 		await context.dispatch('setTbView', { key, patch: { targetCalendarId: calendarId } })
+	},
+
+	/**
+	 * Imports the tasks of an iCalendar file into a list.
+	 * Every task is stored unchanged; tasks whose UID is already in the list are skipped.
+	 *
+	 * @param {object} context The store context
+	 * @param {object} data Destructuring object
+	 * @param {object} data.calendar The list
+	 * @param {string} data.text The content of the file
+	 * @return {Promise<object>} { created, existing, failed, other }
+	 */
+	async tbImportTasks(context, { calendar, text }) {
+		const { tasks, other } = splitTasks(text)
+		const result = { created: 0, existing: 0, failed: 0, other }
+		const imported = []
+		// UIDs already in the list, also of completed tasks that are not loaded
+		const known = new Set(Object.keys(calendar.tasks))
+		if (tasks.length) {
+			const items = await findVTODObyState(calendar, null, null)
+			for (const item of items || []) {
+				const uid = uidOf(item.data)
+				if (uid) {
+					known.add(uid)
+				}
+			}
+		}
+		for (const { uid, ics } of tasks) {
+			if (known.has(uid)) {
+				result.existing++
+				continue
+			}
+			try {
+				const response = await calendar.dav.createVObject(ics)
+				const task = new Task(response.data, calendar)
+				task.dav = response
+				imported.push(task)
+				known.add(uid)
+				result.created++
+			} catch (error) {
+				console.error('Tasks Board: could not import a task', uid, error)
+				result.failed++
+			}
+		}
+		// Completed tasks are only kept in the app when the completed tasks of the list are loaded
+		const shown = imported.filter(task => !task.completed || calendar.loadedCompleted)
+		const byUid = new Map(shown.map(task => [task.uid, task]))
+		for (const task of shown) {
+			for (const sub of [...shown, ...Object.values(calendar.tasks)]) {
+				if (sub.related === task.uid) {
+					task.subTasks[sub.uid] = sub
+				}
+			}
+		}
+		context.commit('appendTasksToCalendar', { calendar, tasks: shown })
+		context.commit('appendTasks', shown)
+		for (const task of shown) {
+			const parent = byUid.get(task.related) || calendar.tasks[task.related]
+			if (parent) {
+				context.commit('addTaskToParent', { task, parent })
+			}
+		}
+		return result
+	},
+
+	/**
+	 * Stores the order of the dashboard and the collections
+	 *
+	 * @param {object} context The store context
+	 * @param {string[]} order 'dashboard' and the collection ids
+	 * @return {Promise}
+	 */
+	setTbNavigationOrder(context, order) {
+		return context.dispatch('setTbPrefs', { collectionOrder: order })
 	},
 
 	async setTbPrefs(context, patch) {
