@@ -33,9 +33,12 @@ import { createWebHistory, createRouter, RouterView } from 'vue-router'
 
 const webRootWithIndexPHP = getRootUrl() + '/index.php'
 const doesURLContainIndexPHP = window.location.pathname.startsWith(webRootWithIndexPHP)
-const base = generateUrl('apps/' + appName, {}, {
-	noRewrite: doesURLContainIndexPHP,
-})
+// Tasks Board: the base follows the address the page was opened with. A server that
+// serves /apps/… without index.php does not always report it (modRewriteWorking),
+// generateUrl() would then add index.php and no route would match.
+const base = doesURLContainIndexPHP
+	? generateUrl('apps/' + appName, {}, { noRewrite: true })
+	: getRootUrl() + '/apps/' + appName
 
 const routes = [
 	{ path: '/', redirect: getInitialRoute() },

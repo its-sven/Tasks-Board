@@ -1,3 +1,8 @@
+## 1.0.1 - 2026-10-23
+
+### Fixed
+- Links without `/index.php/` (for example `https://cloud.example.com/apps/tasks_board/…`) showed an empty page on servers that serve such addresses but do not report pretty URLs as active
+
 ## 1.0.0 - 2026-10-22
 
 First release of Tasks Board, a fork of Nextcloud Tasks 0.18.1 (main branch of 2026-10-22). The entries below list the changes compared to Nextcloud Tasks; the older entries are the history of Nextcloud Tasks.
