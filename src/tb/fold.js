@@ -10,7 +10,7 @@
  */
 
 import { isParentInList, isTaskInList } from '../store/storeHelper.js'
-import { BOARD_COLLECTIONS, closedTaskInCollection, collectBoardTasks } from './board.js'
+import { CLOSED_COLLECTIONS, closedTaskInCollection, collectBoardTasks } from './board.js'
 import { treeRows } from './table.js'
 
 import { getCurrentUser } from '@nextcloud/auth'
@@ -42,7 +42,7 @@ export function listRoots(calendars, collectionId, { showClosed = false, now = m
 					roots.push(task)
 				}
 			} else if (isTaskInList(task, collectionId)
-				|| (showClosed && task.closed && BOARD_COLLECTIONS.includes(collectionId) && closedTaskInCollection(task, collectionId, now, me))) {
+				|| (showClosed && task.closed && CLOSED_COLLECTIONS.includes(collectionId) && closedTaskInCollection(task, collectionId, now, me))) {
 				roots.push(task)
 			}
 		}

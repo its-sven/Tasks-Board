@@ -26,6 +26,9 @@ export const COLUMNS = ['open', 'inProgress', 'waiting', 'done', 'cancelled']
 /** Collections that can be shown as a board */
 export const BOARD_COLLECTIONS = ['all', 'current', 'starred', 'today', 'assigned']
 
+/** Collections with the button for completed tasks: those with a board, and "Week" (a list only) */
+export const CLOSED_COLLECTIONS = [...BOARD_COLLECTIONS, 'week']
+
 /** In collections, the done/cancelled columns only show tasks closed within this many days */
 export const RECENTLY_CLOSED_DAYS = 14
 

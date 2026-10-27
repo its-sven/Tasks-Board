@@ -35,6 +35,17 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 					:collection-string="`week-${day.diff}`"
 					:collection-id="`week-${day.diff}`" />
 			</div>
+			<!-- Tasks Board: recently closed tasks, shown with the button in the header -->
+			<div v-if="tbClosedTasks.length" class="grouped-tasks">
+				<h2 class="heading">
+					<span class="heading__name">{{ tbt('Completed tasks of the last {days} days', { days: tbRecentDays }) }}</span>
+				</h2>
+				<TaskDragContainer :tasks="tbClosedTasks"
+					:disabled="true"
+					class="completed"
+					collection-string="week"
+					collection-id="week" />
+			</div>
 		</div>
 	</div>
 </template>
@@ -43,6 +54,8 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 import HeaderBar from '../../components/HeaderBar.vue'
 import TaskDragContainer from '../../components/TaskDragContainer.vue'
 import { isTaskInList } from '../../store/storeHelper.js'
+import { closedTasksOfCollection, RECENTLY_CLOSED_DAYS } from '../../tb/board.js'
+import { tbt } from '../../tb/l10n.js'
 import './task-list.scss'
 
 import { translate as t } from '@nextcloud/l10n'
@@ -60,6 +73,22 @@ export default {
 			tasks: 'getAllTasks',
 			openRootTasks: 'findOpenRootTasks',
 		}),
+
+		/**
+		 * Tasks Board: main tasks closed in the last days, shown with the button in the header
+		 *
+		 * @return {Array} The tasks
+		 */
+		tbClosedTasks() {
+			if (!this.$store.getters.tbShowClosed) {
+				return []
+			}
+			return this.$store.getters.getSortedCalendars.flatMap(calendar => closedTasksOfCollection(calendar, 'week'))
+		},
+
+		tbRecentDays() {
+			return RECENTLY_CLOSED_DAYS
+		},
 
 		/**
 		 * Returns an array with an entry for every day which has tasks for this day.
@@ -88,6 +117,7 @@ export default {
 		},
 	},
 	methods: {
+		tbt,
 		dayString(day) {
 			const date = moment().add(day, 'day')
 			let dayString

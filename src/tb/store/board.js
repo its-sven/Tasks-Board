@@ -4,7 +4,9 @@
  */
 
 import Task from '../../models/task.js'
+import client from '../../services/cdav.js'
 import Requests from '../../services/requests.js'
+import { Calendar } from '../../store/calendars.js'
 import { waitingTag, isWaitingTagName, hasWaitingTag, startsInFuture, parseViews, patchViews, viewFor } from '../board.js'
 import { findVTODObyState } from '../../store/cdav-requests.js'
 import { splitTasks, uidOf } from '../import.js'
@@ -315,6 +317,31 @@ const actions = {
 	 */
 	setTbShowClosed({ dispatch }, show) {
 		return dispatch('setSetting', { type: 'showHidden', value: show ? 1 : 0 })
+	},
+
+	/**
+	 * Loads the lists that are new on the server (created elsewhere or shared
+	 * with the user) together with their open tasks
+	 *
+	 * @param {object} context The store context
+	 * @return {Promise<string[]>} The URLs of all lists on the server
+	 */
+	async tbLoadNewCalendars(context) {
+		const { calendars } = await client.calendarHomes[0].findAllCalDAVCollectionsGrouped()
+		const known = new Set(context.rootState.calendars.calendars.map(calendar => calendar.id))
+		const added = []
+		for (const collection of calendars) {
+			const calendar = Calendar(collection, context.rootGetters.getCurrentUserPrincipal)
+			if (!known.has(calendar.id)) {
+				context.commit('addCalendar', calendar)
+				added.push(context.rootGetters.getCalendarById(calendar.id))
+			}
+		}
+		await Promise.all(added.filter(calendar => calendar?.supportsTasks).map(calendar => {
+			context.dispatch('fetchPrincipalByUrl', { url: calendar.owner })
+			return context.dispatch('getTasksFromCalendar', { calendar, completed: false, related: null })
+		}))
+		return calendars.map(collection => collection.url)
 	},
 
 	/**

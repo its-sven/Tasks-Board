@@ -24,7 +24,7 @@ When switched on, the completed tasks of the shown lists are loaded.
 </template>
 
 <script>
-import { viewKeyForRoute } from '../board.js'
+import { CLOSED_COLLECTIONS, viewKeyForRoute } from '../board.js'
 import { loadCompletedTasks } from '../closed.js'
 import { tbt } from '../l10n.js'
 
@@ -54,13 +54,13 @@ export default {
 			return viewKeyForRoute(this.$route)
 		},
 		/**
-		 * In all lists and in the collections that can also be shown as board or table.
-		 * Not in "Done" (only closed tasks anyway), "Waiting", "Follow-up due" and "Week".
+		 * In all lists, in the collections that can also be shown as board or table, and in "Week".
+		 * Not in "Done" (only closed tasks anyway), "Waiting" and "Follow-up due".
 		 *
 		 * @return {boolean}
 		 */
 		visible() {
-			return !!this.viewKey
+			return !!this.viewKey || CLOSED_COLLECTIONS.includes(this.$route.params.collectionId)
 		},
 		calendars() {
 			if (this.$route.params.calendarId) {

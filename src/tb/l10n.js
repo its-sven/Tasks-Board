@@ -305,6 +305,7 @@ const translations = {
 		'Completed tasks are hidden.': 'Erledigte sind ausgeblendet.',
 		Show: 'Anzeigen',
 		'Could not load the completed tasks.': 'Die erledigten Aufgaben konnten nicht geladen werden.',
+		'The list "{list}" is no longer available.': 'Die Liste „{list}“ ist nicht mehr verfügbar.',
 		'Move up: {name}': 'Nach oben: {name}',
 		'Move up': 'Nach oben',
 		'Move down: {name}': 'Nach unten: {name}',

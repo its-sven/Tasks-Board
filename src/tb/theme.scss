@@ -477,16 +477,70 @@ $breakpoint-mobile: 1024px;
 			display: none;
 		}
 
-		// Phones: title gets the full width, tags wrap below it
+		// Phones: title gets the full width, tags wrap below it. Menu and star stay
+		// at the top right, date, person, progress and the other icons go below
+		// the title; arrow, checkbox and buttons line up with its first line.
 		@media only screen and (max-width: 600px) {
 			> .task-item__body {
 				height: auto;
 				min-height: 44px;
+				flex-wrap: wrap;
+				align-items: flex-start;
+				padding-right: 76px;
+
+				.tb-subtask-toggle.tb-subtask-toggle {
+					top: 9px;
+					transform: none;
+				}
+
+				.task-checkbox {
+					margin-top: 5px;
+				}
+
+				.task-body__icons {
+					flex: 1 1 100%;
+					justify-content: flex-start;
+					flex-wrap: wrap;
+					gap: 2px 6px;
+					height: auto;
+					padding: 0 0 0 34px;
+
+					// Something besides menu and star: a row of its own below the title
+					&:has(> :nth-last-child(3)) {
+						margin-top: -6px;
+						padding-bottom: 8px;
+					}
+
+					> :nth-last-child(-n + 2) {
+						position: absolute;
+						top: 5px;
+					}
+
+					> :nth-last-child(2) {
+						right: 40px;
+					}
+
+					> :last-child {
+						right: 4px;
+					}
+
+					// Right-aligned in a fixed width next to the title on wide screens
+					> div.date:not(.action-item) {
+						padding-inline-start: 0;
+
+						span {
+							width: auto;
+							text-align: start;
+						}
+					}
+				}
 
 				.task-body__info {
+					flex: 1 1 0;
+					min-width: 0;
 					flex-wrap: wrap;
 					row-gap: 2px;
-					padding: 6px 0;
+					padding: 12px 0;
 
 					.summary {
 						flex-basis: 100%;

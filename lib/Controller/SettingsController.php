@@ -45,6 +45,17 @@ class SettingsController extends Controller {
 	}
 
 	/**
+	 * Tasks Board: the route GET /api/v1/settings had no method any more
+	 *
+	 * @NoAdminRequired
+	 */
+	public function get() {
+		return $this->generateResponse(function () {
+			return $this->settingsService->get();
+		});
+	}
+
+	/**
 	 * @NoAdminRequired
 	 */
 	public function set($setting, $value) {

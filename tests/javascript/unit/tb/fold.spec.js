@@ -57,6 +57,8 @@ describe('fold - main tasks of the list', () => {
 		// The project counts because of its important subtask
 		expect(uids(listRoots([cal], 'starred', options))).toEqual(['project'])
 		expect(uids(listRoots([cal], 'all', { ...options, showClosed: true }))).toEqual(['closed', 'project', 'single'])
+		// "Week" lists recently closed main tasks below the days, too
+		expect(listRoots([cal], 'week', { ...options, showClosed: true }).map(task => task.uid)).toContain('closed')
 	})
 })
 

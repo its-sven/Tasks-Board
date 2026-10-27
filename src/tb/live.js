@@ -10,20 +10,29 @@
  * Every list is compared with the server by WebDAV sync (RFC 6578): the
  * server only reports the tasks that changed since the last sync token.
  * This runs every 30 seconds while the page is visible, right away when the
- * window gets the focus again, and right away in all other tabs of the same
- * browser after a change (BroadcastChannel).
+ * window gets the focus again, right away in all other tabs of the same
+ * browser after a change (BroadcastChannel), and right away when the server
+ * reports a new activity through the notify_push app (if it is installed;
+ * changes in shared lists and new shares create activities).
+ *
+ * Lists that are new on the server (created elsewhere, shared with the user)
+ * are loaded, lists that are gone (deleted, no longer shared) are removed.
  *
  * Tasks that are being edited (open in the sidebar with the cursor in a
  * field, or currently saved) are left alone and updated in a later round.
  */
 
 import Task from '../models/task.js'
+import { tbt } from './l10n.js'
 
 import Axios from '@nextcloud/axios'
+import { showInfo } from '@nextcloud/dialogs'
 import { emit } from '@nextcloud/event-bus'
+import { listen } from '@nextcloud/notify_push'
 import { toRaw } from 'vue'
 
 const DAV = 'DAV:'
+const NC = 'http://nextcloud.com/ns'
 const INTERVAL = 30 * 1000
 const MIN_GAP = 3 * 1000
 const MULTIGET_CHUNK = 50
@@ -167,7 +176,8 @@ function isBusy(task) {
 }
 
 /**
- * Reads the current sync tokens of all lists below a calendar home (one request)
+ * Reads the current sync tokens of all lists below a calendar home (one request).
+ * Lists in the trash bin are still listed there (with a deletion date) and are left out.
  *
  * @param {string} xml The multistatus document of a PROPFIND
  * @return {Map} Decoded href of the list => token
@@ -182,7 +192,8 @@ export function parseTokens(xml) {
 		const nodes = Array.from(response.querySelectorAll('*'))
 		const href = nodes.find(node => node.namespaceURI === DAV && node.localName === 'href')?.textContent.trim()
 		const token = nodes.find(node => node.namespaceURI === DAV && node.localName === 'sync-token')?.textContent.trim()
-		if (href && token) {
+		const deleted = nodes.find(node => node.namespaceURI === NC && node.localName === 'deleted-at')?.textContent.trim()
+		if (href && token && !deleted) {
 			tokens.set(normalizeHref(href).replace(/\/?$/, '/'), token)
 		}
 	}
@@ -197,12 +208,38 @@ async function requestTokens(url) {
 	const response = await Axios({
 		method: 'PROPFIND',
 		url,
-		data: '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:sync-token/></d:prop></d:propfind>',
+		data: '<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:" xmlns:nc="http://nextcloud.com/ns"><d:prop><d:sync-token/><nc:deleted-at/></d:prop></d:propfind>',
 		headers: { 'Content-Type': 'application/xml; charset=utf-8', Depth: '1' },
 		responseType: 'text',
 		transformResponse: [data => data],
 	})
 	return parseTokens(response.data)
+}
+
+/**
+ * @param {string} url The URL of a list
+ * @return {string} Its decoded path with a trailing slash, as in parseTokens
+ */
+function listHref(url) {
+	return normalizeHref(url).replace(/\/?$/, '/')
+}
+
+/**
+ * Lists that appeared or disappeared below a calendar home
+ *
+ * @param {Map} current Decoded href => sync token of all collections below the home (parseTokens)
+ * @param {Array} calendars The lists (calendars) of this home in the store
+ * @param {Set} ignored Hrefs of collections that are no lists (looked for before)
+ * @return {object} { added: [href], removed: [calendar] }
+ */
+export function homeChanges(current, calendars, ignored = new Set()) {
+	const known = new Set(calendars.map(calendar => listHref(calendar.dav.url)))
+	// An answer without any of the known lists is not trusted: nothing is removed then
+	const trusted = calendars.some(calendar => current.has(listHref(calendar.dav.url)))
+	return {
+		added: [...current.keys()].filter(href => !known.has(href) && !ignored.has(href)),
+		removed: trusted ? calendars.filter(calendar => calendar.supportsTasks && !current.has(listHref(calendar.dav.url))) : [],
+	}
 }
 
 /**
@@ -246,6 +283,9 @@ export class LiveSync {
 		this.timer = null
 		this.channel = null
 		this.broadcastTimer = null
+		// Collections below the calendar home that are no lists
+		this.ignored = new Set()
+		this.push = false
 	}
 
 	start() {
@@ -267,6 +307,11 @@ export class LiveSync {
 				}
 			},
 		})
+		try {
+			this.push = listen('notify_activity', this.onPush)
+		} catch (error) {
+			console.debug('Tasks Board: no push from the server', error)
+		}
 	}
 
 	stop() {
@@ -280,6 +325,13 @@ export class LiveSync {
 	onWake = () => {
 		if (document.visibilityState === 'visible') {
 			this.sync()
+		}
+	}
+
+	/** New activity on the server: compare now (a hidden tab does it when it is shown again) */
+	onPush = () => {
+		if (document.visibilityState === 'visible') {
+			this.sync({ force: true })
 		}
 	}
 
@@ -336,7 +388,8 @@ export class LiveSync {
 	}
 
 	/**
-	 * The lists that changed since the last sync
+	 * The lists that changed since the last sync. New lists below a calendar
+	 * home are loaded, lists that are gone are removed.
 	 *
 	 * @param {Array} calendars All lists
 	 * @return {Promise<Array>} The lists to sync
@@ -364,9 +417,19 @@ export class LiveSync {
 				result.push(...list)
 				continue
 			}
+			const { added, removed } = homeChanges(current, list, this.ignored)
+			if (added.length) {
+				await this.loadLists(added)
+			}
+			for (const calendar of removed) {
+				this.removeList(calendar)
+			}
 			for (const calendar of list) {
+				if (removed.includes(calendar)) {
+					continue
+				}
 				const known = this.tokens.has(calendar.id) ? this.tokens.get(calendar.id) : calendar.dav.syncToken
-				const token = current.get(normalizeHref(calendar.dav.url).replace(/\/?$/, '/'))
+				const token = current.get(listHref(calendar.dav.url))
 				// Also lists with tasks that were left out last time (being edited)
 				if (!token || !known || token !== known || this.pending.get(calendar.id)?.size) {
 					result.push(calendar)
@@ -374,6 +437,49 @@ export class LiveSync {
 			}
 		}
 		return result
+	}
+
+	/**
+	 * Loads the lists that are new on the server
+	 *
+	 * @param {string[]} hrefs The new collections below a calendar home
+	 */
+	async loadLists(hrefs) {
+		let found
+		try {
+			found = new Set((await this.store.dispatch('tbLoadNewCalendars')).map(listHref))
+		} catch (error) {
+			console.debug('Tasks Board: could not load the new lists', error)
+			return
+		}
+		// Not looked for again: collections that are no lists (e.g. inbox, trash bin)
+		for (const href of hrefs) {
+			if (!found.has(href)) {
+				this.ignored.add(href)
+			}
+		}
+	}
+
+	/**
+	 * Removes a list that was deleted or is no longer shared with the user
+	 *
+	 * @param {object} calendar The list
+	 */
+	removeList(calendar) {
+		const { store } = this
+		if (!store.state.calendars.calendars.includes(calendar)) {
+			return
+		}
+		Object.values(calendar.tasks).forEach(task => store.commit('deleteTask', task))
+		store.commit('deleteCalendar', calendar)
+		this.tokens.delete(calendar.id)
+		this.pending.delete(calendar.id)
+		const path = decodeURIComponent(window.location.pathname)
+		if (calendar.supportsTasks && path.includes('/calendars/' + calendar.id)) {
+			// The list was open: back to the start page
+			showInfo(tbt('The list "{list}" is no longer available.', { list: calendar.displayName }))
+			import('../router.js').then(({ default: router }) => router.push('/'))
+		}
 	}
 
 	/**

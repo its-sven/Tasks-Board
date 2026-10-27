@@ -2,12 +2,18 @@
 
 ### Added
 - One button in the header opens the subtasks of all tasks shown, or closes them all once they are all open, in the list and in the table (main tasks as rows). It is not shown on the board and in lists without subtasks, and it is inactive while searching
+- Lists that were created elsewhere or shared with you show up without reloading, and lists that were deleted or are no longer shared with you disappear (with a note if the list was open)
+- If the Nextcloud app Client Push (notify_push) is installed, changes in shared lists show up right away when the server reports them, not only with the next comparison every 30 seconds
+- The button for completed and cancelled tasks is also in the collection "Week": the tasks completed in the last 14 days are listed below the days
 
 ### Changed
 - "Open all" and "Close all" moved from the view options and the table settings to the new button
+- On phones the title of a task gets the full width: date, person, progress and the other icons are shown below it, menu and star stay at the top right
 
 ### Fixed
 - The arrow in front of a task in the list was a few pixels lower than the checkbox and the title
+- The server logged an error for the address `/api/v1/settings` of the app
+- Updates from Nextcloud Tasks (translations, dependencies)
 
 ## 1.1.1 - 2026-10-23
 
