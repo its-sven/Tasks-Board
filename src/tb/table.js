@@ -121,7 +121,7 @@ export function shownColumns(columns, singleList) {
  * @param {Array} roots The main tasks (already sorted)
  * @param {object} options Options
  * @param {Function} options.isExpanded (task) => whether its subtasks are open
- * @param {Function} options.include (subtask) => whether it belongs in the table
+ * @param {Function} options.include (subtask, parent) => whether it belongs in the table
  * @param {Function} options.order (tasks) => the tasks sorted
  * @param {Function|null} options.matches (task) => whether it matches the search/filter, null = no search
  * @return {Array} Rows: { task, depth, hasChildren, expanded, context }
@@ -130,7 +130,7 @@ export function treeRows(roots, { isExpanded, include = () => true, order = task
 	const rows = []
 	const filtering = typeof matches === 'function'
 	const leadsToMatch = new Map()
-	const children = task => Object.values(task.subTasks || {}).filter(include)
+	const children = task => Object.values(task.subTasks || {}).filter(child => include(child, task))
 	const relevant = (task, path) => {
 		if (!filtering) {
 			return true

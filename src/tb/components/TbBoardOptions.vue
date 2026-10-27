@@ -5,10 +5,11 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 <!--
 View options in the header.
-Table: columns (for all lists), rows, open/close all subtasks.
-List: style (cards, rows, compact) for all lists, open/close all subtasks.
+Table: columns (for all lists), rows.
+List: style (cards, rows, compact) for all lists.
 Board: which cards, rows, order in the columns (per list).
-Completed and cancelled tasks: own button in the header (TbClosedToggle).
+Completed and cancelled tasks and opening/closing all subtasks: own buttons
+in the header (TbClosedToggle, TbExpandToggle).
 -->
 <template>
 	<NcActions v-if="isTable"
@@ -47,22 +48,6 @@ Completed and cancelled tasks: own button in the header (TbClosedToggle).
 			@update:model-value="setView({ cards: 'all' })">
 			{{ tbt('All tasks incl. subtasks') }}
 		</NcActionRadio>
-		<template v-if="view.cards !== 'all'">
-			<NcActionSeparator />
-			<NcActionCaption :name="tbt('Subtasks')" />
-			<NcActionButton :close-after-click="true" @click="expandAllRows">
-				<template #icon>
-					<UnfoldMoreHorizontal :size="20" />
-				</template>
-				{{ tbt('Open all') }}
-			</NcActionButton>
-			<NcActionButton :close-after-click="true" @click="collapseAllRows">
-				<template #icon>
-					<UnfoldLessHorizontal :size="20" />
-				</template>
-				{{ tbt('Close all') }}
-			</NcActionButton>
-		</template>
 	</NcActions>
 	<NcActions v-else-if="!isBoard"
 		class="tb-board-options tb-view-options"
@@ -81,20 +66,6 @@ Completed and cancelled tasks: own button in the header (TbClosedToggle).
 			@update:model-value="setListStyle(option.value)">
 			{{ option.label }}
 		</NcActionRadio>
-		<NcActionSeparator />
-		<NcActionCaption :name="tbt('Subtasks')" />
-		<NcActionButton :close-after-click="true" @click="expandAll">
-			<template #icon>
-				<UnfoldMoreHorizontal :size="20" />
-			</template>
-			{{ tbt('Open all') }}
-		</NcActionButton>
-		<NcActionButton :close-after-click="true" @click="collapseAll">
-			<template #icon>
-				<UnfoldLessHorizontal :size="20" />
-			</template>
-			{{ tbt('Close all') }}
-		</NcActionButton>
 	</NcActions>
 	<NcActions v-else
 		class="tb-board-options"
@@ -159,8 +130,6 @@ import NcActionSeparator from '@nextcloud/vue/components/NcActionSeparator'
 
 import Restore from 'vue-material-design-icons/Restore.vue'
 import TuneVariant from 'vue-material-design-icons/TuneVariant.vue'
-import UnfoldLessHorizontal from 'vue-material-design-icons/UnfoldLessHorizontal.vue'
-import UnfoldMoreHorizontal from 'vue-material-design-icons/UnfoldMoreHorizontal.vue'
 
 export default {
 	name: 'TbBoardOptions',
@@ -173,8 +142,6 @@ export default {
 		NcActions,
 		Restore,
 		TuneVariant,
-		UnfoldLessHorizontal,
-		UnfoldMoreHorizontal,
 	},
 	computed: {
 		viewKey() {
@@ -231,37 +198,6 @@ export default {
 		},
 		setListStyle(listStyle) {
 			this.$store.dispatch('setTbPrefs', { listStyle })
-		},
-		/**
-		 * Tasks with subtasks
-		 *
-		 * @param {Array} calendars The lists, all loaded lists by default
-		 * @return {string[]} Their keys
-		 */
-		parentKeys(calendars = this.$store.getters.getSortedCalendars) {
-			const keys = []
-			for (const calendar of calendars) {
-				for (const task of Object.values(calendar.tasks)) {
-					if (Object.keys(task.subTasks || {}).length) {
-						keys.push(task.key)
-					}
-				}
-			}
-			return keys
-		},
-		expandAll() {
-			this.$store.commit('setTbCollapsed', { keys: Object.keys(this.$store.state.tbBoard.collapsedTasks), collapsed: false })
-		},
-		collapseAll() {
-			this.$store.commit('setTbCollapsed', { keys: this.parentKeys(), collapsed: true })
-		},
-		expandAllRows() {
-			const calendar = this.$route.params.calendarId ? this.$store.getters.getCalendarByRoute(this.$route) : null
-			const keys = this.parentKeys(calendar ? [calendar] : undefined)
-			this.$store.commit('setTbTableExpanded', { keys, expanded: true })
-		},
-		collapseAllRows() {
-			this.$store.commit('setTbTableExpanded', { keys: Object.keys(this.$store.state.tbBoard.tableExpanded), expanded: false })
 		},
 	},
 }

@@ -51,6 +51,8 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 		<FilterDropdown />
 		<TbSortDropdown />
 		<TbBoardOptions />
+		<!-- Tasks Board: open or close all subtasks -->
+		<TbExpandToggle />
 		<TbClosedToggle />
 		<TbSelectionToggle />
 		<TbSelectionBar />
@@ -68,6 +70,7 @@ import FilterDropdown from './FilterDropdown.vue'
 import TbSortDropdown from '../tb/components/TbSortDropdown.vue'
 import TbBoardOptions from '../tb/components/TbBoardOptions.vue'
 import TbClosedToggle from '../tb/components/TbClosedToggle.vue'
+import TbExpandToggle from '../tb/components/TbExpandToggle.vue'
 import TbViewSwitch from '../tb/components/TbViewSwitch.vue'
 import { tbt } from '../tb/l10n.js'
 import { currentPerson } from '../tb/store/assignment.js'
@@ -96,6 +99,7 @@ export default {
 		FilterDropdown,
 		TbBoardOptions,
 		TbClosedToggle,
+		TbExpandToggle,
 		TbTargetListPicker,
 		TbSelectionBar,
 		TbSelectionToggle,

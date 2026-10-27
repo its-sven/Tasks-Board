@@ -194,9 +194,9 @@ person and due date can be changed directly in the cell.
 
 <script>
 import TaskCheckbox from '../../components/TaskCheckbox.vue'
-import { isTaskInList } from '../../store/storeHelper.js'
-import { boardColumn, closedTaskInCollection, collectBoardTasks, isFiltering, parentTask, priorityGroup } from '../board.js'
+import { boardColumn, collectBoardTasks, isFiltering, parentTask, priorityGroup } from '../board.js'
 import { shortDate } from '../dates.js'
+import { tableSubtaskFilter } from '../fold.js'
 import { tbt } from '../l10n.js'
 import { sort as tbSort } from '../sort.js'
 import { assigneeOf } from '../assignee.js'
@@ -209,7 +209,6 @@ import TbAvatar from './TbAvatar.vue'
 import TbTableMenu from './TbTableMenu.vue'
 import TbWaitDialog from './TbWaitDialog.vue'
 
-import { getCurrentUser } from '@nextcloud/auth'
 import { showError } from '@nextcloud/dialogs'
 import moment from '@nextcloud/moment'
 
@@ -316,16 +315,9 @@ export default {
 			if (!this.tree) {
 				return order(tasks).map(task => ({ task, depth: 0, hasChildren: false, expanded: false, context: false }))
 			}
-			const now = moment()
-			const me = getCurrentUser()?.uid
-			const collectionId = this.collectionId
-			// Subtasks: the same rules as for the main tasks
-			const include = collectionId
-				? task => (task.closed ? showClosed && closedTaskInCollection(task, collectionId, now, me) : isTaskInList(task, collectionId))
-				: task => showClosed || !task.closed
 			return treeRows(order(tasks), {
 				isExpanded: task => this.$store.getters.isTbTableExpanded(task.key),
-				include,
+				include: tableSubtaskFilter(this.collectionId, showClosed),
 				order,
 				matches: this.filtering ? task => task.matches(this.searchQuery, this.filter) : null,
 			})

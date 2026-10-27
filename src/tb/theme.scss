@@ -150,6 +150,16 @@ $breakpoint-mobile: 1024px;
 
 		@media only screen and (max-width: $breakpoint-mobile) {
 			padding-right: 8px;
+
+			// Room for the navigation toggle only next to the input, so the
+			// buttons below it get the full width (one row on phones)
+			&:has(> .header__input) {
+				padding-left: 8px;
+
+				> .header__input {
+					margin-left: calc(2 * var(--default-grid-baseline) + var(--default-clickable-area) - 8px);
+				}
+			}
 		}
 
 		// Narrow header (phone, or the sidebar is open): the input gets its own

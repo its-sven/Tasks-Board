@@ -46,7 +46,8 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-.tb-subtask-toggle {
+// Twice: the button rule of the server (margin: 3px) is more specific and pushed the arrow down
+.tb-subtask-toggle.tb-subtask-toggle {
 	position: absolute;
 	inset-inline-start: 0;
 	top: 50%;

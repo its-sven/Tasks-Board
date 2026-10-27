@@ -1,3 +1,14 @@
+## 1.2.0 - unreleased
+
+### Added
+- One button in the header opens the subtasks of all tasks shown, or closes them all once they are all open, in the list and in the table (main tasks as rows). It is not shown on the board and in lists without subtasks, and it is inactive while searching
+
+### Changed
+- "Open all" and "Close all" moved from the view options and the table settings to the new button
+
+### Fixed
+- The arrow in front of a task in the list was a few pixels lower than the checkbox and the title
+
 ## 1.1.1 - 2026-10-23
 
 ### Fixed
