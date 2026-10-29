@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { foldableTasks, listRoots, listSubtaskFilter, tableSubtaskFilter, viewFoldableTasks } from '../../../../src/tb/fold.js'
+import { foldableTasks, listRoots, listSubtaskFilter, openPathKeys, tableSubtaskFilter, viewFoldableTasks } from '../../../../src/tb/fold.js'
 
 import moment from '@nextcloud/moment'
 
@@ -103,5 +103,14 @@ describe('fold - tasks to open and close', () => {
 		expect(uids(viewFoldableTasks('table', [cal], 'starred', options))).toEqual(['project'])
 		expect(uids(viewFoldableTasks('table', [cal], null, options))).toEqual(['one', 'project'])
 		expect(viewFoldableTasks('list', [makeCalendar('empty')], null, options)).toEqual([])
+	})
+})
+
+describe('fold - open for now', () => {
+	it('takes the open task and the tasks above it', () => {
+		const { project, one, detail, single } = build()
+		expect([...openPathKeys(detail)].sort()).toEqual([detail.key, one.key, project.key].sort())
+		expect([...openPathKeys(single)]).toEqual([single.key])
+		expect(openPathKeys(null).size).toBe(0)
 	})
 })

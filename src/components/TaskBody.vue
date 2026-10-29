@@ -307,6 +307,8 @@ export default {
 			showCreateMultipleTasksModal: false,
 			multipleTasks: { numberOfTasks: 0, tasks: {} },
 			additionalTaskProperties: {},
+			// Tasks Board: closed again with the arrow while the task is open (see showSubtasks)
+			tbKeepClosed: false,
 		}
 	},
 	computed: {
@@ -501,8 +503,9 @@ export default {
 		 * @return {boolean} If we show the subtasks
 		 */
 		showSubtasks() {
-			// Tasks Board: closed with the arrow (remembered per browser); a search or an open subtask shows them anyway
-			if (this.$store.getters.isTbCollapsed(this.task.key) && !this.searchQuery && !this.isDescendantOpen()) {
+			// Tasks Board: closed with the arrow (remembered per browser); a search or an open subtask shows them anyway,
+			// and so does opening the task itself until another task is opened (unless closed again with the arrow)
+			if (this.$store.getters.isTbCollapsed(this.task.key) && !this.searchQuery && !this.isDescendantOpen() && !this.tbOpenForNow) {
 				return false
 			}
 			if (!this.task.hideSubtasks || this.searchQuery || this.isTaskOpen() || this.isDescendantOpen()) {
@@ -510,6 +513,15 @@ export default {
 			} else {
 				return false
 			}
+		},
+
+		/**
+		 * Tasks Board: the task is open in the sidebar, so its closed subtasks are shown for now
+		 *
+		 * @return {boolean}
+		 */
+		tbOpenForNow() {
+			return this.isTaskOpen() && !this.tbKeepClosed
 		},
 
 		/**
@@ -521,6 +533,13 @@ export default {
 		 */
 		readOnly() {
 			return this.task.calendar.readOnly || (this.task.calendar.isSharedWithMe && this.task.class !== 'PUBLIC')
+		},
+	},
+
+	// Tasks Board: another task opened, a task closed with the arrow opens for now again next time
+	watch: {
+		'$route.params.taskId'() {
+			this.tbKeepClosed = false
 		},
 	},
 
@@ -700,6 +719,12 @@ export default {
 				this.$store.commit('setTbCollapsed', { keys: [this.task.key], collapsed: false })
 				return
 			}
+			if (this.tbOpenForNow && this.$store.getters.isTbCollapsed(this.task.key)) {
+				// Only open because the task is open: close it again, it stays closed
+				this.tbKeepClosed = true
+				return
+			}
+			this.tbKeepClosed = false
 			this.$store.commit('setTbCollapsed', { keys: [this.task.key] })
 		},
 

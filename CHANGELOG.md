@@ -1,3 +1,8 @@
+## 1.2.1 - 2026-10-29
+
+### Changed
+- A click on a closed main task opens its subtasks while the task is open in the sidebar, in the list and in the table. They close again when another task is opened or the sidebar is closed; opened with the arrow, they stay open as before. The arrow closes them again right away
+
 ## 1.2.0 - 2026-10-27
 
 ### Added

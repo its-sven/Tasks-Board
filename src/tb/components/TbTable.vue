@@ -196,7 +196,7 @@ person and due date can be changed directly in the cell.
 import TaskCheckbox from '../../components/TaskCheckbox.vue'
 import { boardColumn, collectBoardTasks, isFiltering, parentTask, priorityGroup } from '../board.js'
 import { shortDate } from '../dates.js'
-import { tableSubtaskFilter } from '../fold.js'
+import { openPathKeys, tableSubtaskFilter } from '../fold.js'
 import { tbt } from '../l10n.js'
 import { sort as tbSort } from '../sort.js'
 import { assigneeOf } from '../assignee.js'
@@ -270,6 +270,8 @@ export default {
 			pendingWait: null,
 			maxHeight: 'none',
 			now: moment(),
+			// Rows closed again with the arrow while they are open for now (task.key => true)
+			keepClosed: {},
 		}
 	},
 	computed: {
@@ -299,6 +301,14 @@ export default {
 		filtering() {
 			return isFiltering(this.searchQuery, this.filter)
 		},
+		/**
+		 * The task open in the sidebar and the tasks above it: closed ones are open for now
+		 *
+		 * @return {Set<string>} Their keys
+		 */
+		openPath() {
+			return openPathKeys(this.$route.params.taskId ? this.$store.getters.getTaskByRoute(this.$route) : null)
+		},
 		rows() {
 			const showClosed = this.$store.getters.tbShowClosed
 			let tasks = collectBoardTasks({
@@ -316,7 +326,7 @@ export default {
 				return order(tasks).map(task => ({ task, depth: 0, hasChildren: false, expanded: false, context: false }))
 			}
 			return treeRows(order(tasks), {
-				isExpanded: task => this.$store.getters.isTbTableExpanded(task.key),
+				isExpanded: task => this.$store.getters.isTbTableExpanded(task.key) || this.isOpenForNow(task),
 				include: tableSubtaskFilter(this.collectionId, showClosed),
 				order,
 				matches: this.filtering ? task => task.matches(this.searchQuery, this.filter) : null,
@@ -382,6 +392,9 @@ export default {
 		columns() {
 			this.$nextTick(this.setupSortable)
 		},
+		'$route.params.taskId'() {
+			this.keepClosed = {}
+		},
 	},
 	mounted() {
 		this.setupSortable()
@@ -399,7 +412,24 @@ export default {
 	},
 	methods: {
 		tbt,
+		/**
+		 * Open only because the task or one below it is open in the sidebar
+		 *
+		 * @param {object} task The task
+		 * @return {boolean}
+		 */
+		isOpenForNow(task) {
+			return this.openPath.has(task.key) && !this.keepClosed[task.key]
+		},
 		toggleRow(task) {
+			if (this.isOpenForNow(task) && !this.$store.getters.isTbTableExpanded(task.key)) {
+				// Close it again, it stays closed
+				this.keepClosed = { ...this.keepClosed, [task.key]: true }
+				return
+			}
+			if (this.keepClosed[task.key]) {
+				this.keepClosed = Object.fromEntries(Object.entries(this.keepClosed).filter(([key]) => key !== task.key))
+			}
 			this.$store.commit('setTbTableExpanded', { keys: [task.key] })
 		},
 		stateOf(task) {

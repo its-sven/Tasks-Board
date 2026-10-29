@@ -5,12 +5,13 @@
 
 /**
  * Opening and closing subtasks: which subtasks the list and the table show
- * below a task, and which tasks of the current view have subtasks to open or
- * close (button "Open all" / "Close all" in the header).
+ * below a task, which tasks of the current view have subtasks to open or
+ * close (button "Open all" / "Close all" in the header), and which tasks are
+ * open for now because they or a task below them is open in the sidebar.
  */
 
 import { isParentInList, isTaskInList } from '../store/storeHelper.js'
-import { CLOSED_COLLECTIONS, closedTaskInCollection, collectBoardTasks } from './board.js'
+import { CLOSED_COLLECTIONS, closedTaskInCollection, collectBoardTasks, parentTask } from './board.js'
 import { treeRows } from './table.js'
 
 import { getCurrentUser } from '@nextcloud/auth'
@@ -115,4 +116,22 @@ export function viewFoldableTasks(mode, calendars, collectionId, { showClosed = 
 		return foldableTasks(roots, tableSubtaskFilter(collectionId, showClosed, { now, me }))
 	}
 	return foldableTasks(listRoots(calendars, collectionId, { showClosed, now, me }), listSubtaskFilter(collectionId, showClosed))
+}
+
+/**
+ * The task open in the sidebar and the tasks above it: their subtasks are
+ * shown for now even if they were closed, until another task is opened
+ *
+ * @param {object|null} task The task open in the sidebar
+ * @return {Set<string>} Their keys
+ */
+export function openPathKeys(task) {
+	const keys = new Set()
+	let current = task
+	// Guard against RELATED-TO loops
+	while (current && !keys.has(current.key)) {
+		keys.add(current.key)
+		current = parentTask(current)
+	}
+	return keys
 }
