@@ -1,4 +1,4 @@
-## 1.3.0 - unreleased
+## 1.3.0 - 2026-11-02
 
 ### Added
 - New view **Timeline**: main tasks and their subtasks as bars from the start to the due date, in lists and collections. Drag a bar to move it (a main task takes its subtasks along), drag its ends to change the start or the due date. A task with only one date is a point, a main task without dates spans its subtasks, a subtask outside its main task is marked. Scale week, month or quarter, colour by list, person or status, tasks without dates and single projects can be hidden. On phones the timeline is only shown

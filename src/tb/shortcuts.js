@@ -112,6 +112,6 @@ export const SHORTCUTS = [
 	{ keys: ['Space'], label: 'Complete / reopen the task' },
 	{ keys: ['X'], label: 'Select the task' },
 	{ keys: ['Esc'], label: 'Clear the selection' },
-	{ keys: ['B'], label: 'Switch between list, board and table' },
+	{ keys: ['B'], label: 'Switch between list, board, table and timeline' },
 	{ keys: ['?'], label: 'Show the keyboard shortcuts' },
 ]

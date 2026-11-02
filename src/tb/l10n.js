@@ -296,7 +296,7 @@ const translations = {
 		'In one week': 'In einer Woche',
 		'Could not change the task.': 'Die Aufgabe konnte nicht geändert werden.',
 		'Loading …': 'Lade …',
-		'Switch between list, board and table': 'Zwischen Liste, Board und Tabelle wechseln',
+		'Switch between list, board, table and timeline': 'Zwischen Liste, Board, Tabelle und Zeitachse wechseln',
 		Task: 'Aufgabe',
 		'Start / follow-up': 'Start / Wiedervorlage',
 		Overview: 'Überblick',

@@ -46,7 +46,7 @@ export default {
 			return viewKeyForRoute(this.$route)
 		},
 		/**
-		 * 'list' or 'table'; the collections without board and table are always a list
+		 * 'list', 'table' or 'timeline'; the collections without board and table are always a list
 		 *
 		 * @return {string}
 		 */
