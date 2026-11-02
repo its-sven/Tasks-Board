@@ -30,6 +30,7 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 
 * **Board** (Kanban) with the columns Open, In progress, Waiting and Done (and Cancelled). Drag cards between columns, sort them by hand, show rows per priority, list, main task, tag or person, open subtasks on the card.
 * **Table** with columns you can show, hide, move and sort (title, person, start, due, list, main task, status, priority, tags, progress, overview, created, last modified). Main tasks open like a tree with their subtasks below them. Status, priority, person and due date can be changed right in the cell.
+* **Timeline** with main tasks and their subtasks as bars from the start to the due date, in lists and collections. Drag a bar to move it (a main task takes its subtasks along) or its ends to change start or due; a task with one date is a point, a main task without dates spans its subtasks, a subtask outside its main task is marked. Scale week, month or quarter, colour by list, person or status, single projects and tasks without dates can be hidden. On phones it is only shown.
 * **Dashboard** with the current state, the distribution per person, list, project, priority and tag, the history of the last 12 weeks and the tasks that need attention (overdue, follow-up due, nobody assigned, important but untouched for two weeks). Filters for lists, project, persons and tags.
 * **List** as cards or compact rows, collapsible subtasks (one button in the header opens or closes all of them, also in the table), more sort orders (status, progress, person, list, main task), a separate order for subtasks and grouping by status, tag or priority.
 * **One button** in the header shows or hides completed and cancelled tasks (including subtasks) in all three views, in lists and collections.
@@ -56,6 +57,9 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 ## Screenshots
 
 <table>
+  <tr>
+    <td colspan="2"><img src="screenshots/timeline.png" alt="Timeline of all lists: main tasks and subtasks as bars over October and November, points for tasks with one date, a subtask marked outside its main task"><br><sub><b>Timeline</b> – projects and subtasks over time, drag to plan them</sub></td>
+  </tr>
   <tr>
     <td width="50%"><img src="screenshots/table.png" alt="Table sorted by due date, two main tasks opened with their subtasks below"><br><sub><b>Table</b> – subtasks as a tree, sortable columns, quick changes in the cells</sub></td>
     <td width="50%"><img src="screenshots/dashboard.png" alt="Dashboard with numbers, status ring and distribution per person and list"><br><sub><b>Dashboard</b> – what is open, on whom and where (<a href="screenshots/dashboard-full.png">full page</a>)</sub></td>
