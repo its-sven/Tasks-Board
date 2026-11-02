@@ -29,6 +29,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 		<p class="tb-settings__hint">
 			{{ tbt('Instead of the Tasks app. Applies when the Calendar is opened the next time.') }}
 		</p>
+		<NcCheckboxRadioSwitch type="switch"
+			:model-value="prefs.futureStartWaits"
+			@update:model-value="set({ futureStartWaits: $event })">
+			{{ tbt('Tasks that start in the future are waiting') }}
+		</NcCheckboxRadioSwitch>
+		<p class="tb-settings__hint">
+			{{ tbt('They are in the column and the collection "Waiting" until the start date. Switched off, only the waiting tag makes a task wait, and a start date only plans it (for example on the timeline).') }}
+		</p>
 
 		<NcButton variant="tertiary" class="tb-settings__shortcuts" @click="showShortcuts">
 			<template #icon>

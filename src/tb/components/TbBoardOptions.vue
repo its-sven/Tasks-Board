@@ -6,6 +6,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 <!--
 View options in the header.
 Table: columns (for all lists), rows.
+Timeline: scale, colour of the bars, tasks without dates, which projects are shown (per list).
 List: style (cards, rows, compact) for all lists.
 Board: which cards, rows, order in the columns (per list).
 Completed and cancelled tasks and opening/closing all subtasks: own buttons
@@ -48,6 +49,49 @@ in the header (TbClosedToggle, TbExpandToggle).
 			@update:model-value="setView({ cards: 'all' })">
 			{{ tbt('All tasks incl. subtasks') }}
 		</NcActionRadio>
+	</NcActions>
+	<NcActions v-else-if="isTimeline"
+		class="tb-board-options tb-timeline-options"
+		:aria-label="tbt('Timeline settings')"
+		:title="tbt('Timeline settings')"
+		:force-menu="true">
+		<template #icon>
+			<TuneVariant :size="20" />
+		</template>
+		<NcActionCaption :name="tbt('Scale')" />
+		<NcActionRadio v-for="option in scaleOptions"
+			:key="option.value"
+			name="tb-timeline-scale"
+			:value="option.value"
+			:model-value="view.timelineScale || 'month'"
+			@update:model-value="setView({ timelineScale: option.value })">
+			{{ option.label }}
+		</NcActionRadio>
+		<NcActionSeparator />
+		<NcActionCaption :name="tbt('Colour of the bars')" />
+		<NcActionRadio v-for="option in colorOptions"
+			:key="option.value"
+			name="tb-timeline-color"
+			:value="option.value"
+			:model-value="view.timelineColor || 'calendar'"
+			@update:model-value="setView({ timelineColor: option.value })">
+			{{ option.label }}
+		</NcActionRadio>
+		<NcActionSeparator />
+		<NcActionCheckbox :model-value="!!view.timelineUndated"
+			@update:model-value="setView({ timelineUndated: $event })">
+			{{ tbt('Show tasks without dates') }}
+		</NcActionCheckbox>
+		<template v-if="projects.length">
+			<NcActionSeparator />
+			<NcActionCaption :name="tbt('Projects')" />
+			<NcActionCheckbox v-for="project in projects"
+				:key="project.key"
+				:model-value="!hiddenProjects.includes(project.key)"
+				@update:model-value="setProjectShown(project.key, $event)">
+				{{ project.summary }}
+			</NcActionCheckbox>
+		</template>
 	</NcActions>
 	<NcActions v-else-if="!isBoard"
 		class="tb-board-options tb-view-options"
@@ -117,7 +161,7 @@ in the header (TbClosedToggle, TbExpandToggle).
 </template>
 
 <script>
-import { effectiveLanes, viewKeyForRoute } from '../board.js'
+import { collectBoardTasks, effectiveLanes, viewKeyForRoute } from '../board.js'
 import { tbt } from '../l10n.js'
 import { normalizeColumns, setColumnVisible, storableColumns } from '../table.js'
 
@@ -155,6 +199,42 @@ export default {
 		},
 		isTable() {
 			return !!this.viewKey && this.view.mode === 'table'
+		},
+		isTimeline() {
+			return !!this.viewKey && this.view.mode === 'timeline'
+		},
+		scaleOptions() {
+			return [
+				{ value: 'week', label: tbt('Week') },
+				{ value: 'month', label: tbt('Month') },
+				{ value: 'quarter', label: tbt('Quarter') },
+			]
+		},
+		colorOptions() {
+			return [
+				{ value: 'calendar', label: tbt('List') },
+				{ value: 'assignee', label: tbt('Person') },
+				{ value: 'status', label: tbt('Status') },
+			]
+		},
+		hiddenProjects() {
+			return Array.isArray(this.view.timelineHidden) ? this.view.timelineHidden : []
+		},
+		/**
+		 * The main tasks of the timeline, to show or hide them one by one
+		 *
+		 * @return {Array}
+		 */
+		projects() {
+			if (!this.isTimeline) {
+				return []
+			}
+			const calendar = this.$route.params.calendarId ? this.$store.getters.getCalendarByRoute(this.$route) : null
+			const calendars = this.$route.params.calendarId ? (calendar ? [calendar] : []) : this.$store.getters.getSortedCalendars
+			const showClosed = this.$store.getters.tbShowClosed
+			return collectBoardTasks({ calendars, collectionId: this.$route.params.collectionId || null, cards: 'root' })
+				.filter(task => showClosed || !task.closed)
+				.sort((a, b) => a.summary.localeCompare(b.summary))
 		},
 		tableColumns() {
 			return normalizeColumns(this.$store.getters.tbPrefs.tableColumns)
@@ -195,6 +275,13 @@ export default {
 		},
 		resetColumns() {
 			this.$store.dispatch('setTbPrefs', { tableColumns: null })
+		},
+		setProjectShown(key, shown) {
+			const hidden = this.hiddenProjects.filter(other => other !== key)
+			if (!shown) {
+				hidden.push(key)
+			}
+			this.setView({ timelineHidden: hidden })
 		},
 		setListStyle(listStyle) {
 			this.$store.dispatch('setTbPrefs', { listStyle })

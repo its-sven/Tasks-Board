@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
 <!--
-Header button in the list and the table: opens the subtasks of all tasks
+Header button in the list, the table and the timeline: opens the subtasks of all tasks
 shown, or closes them all once they are all open. Not while searching, the
 way to the matches is open then anyway.
 -->
@@ -65,7 +65,7 @@ export default {
 			if (this.mode === 'table') {
 				return this.$store.getters.tbView(this.viewKey).cards !== 'all'
 			}
-			return this.mode === 'list'
+			return this.mode === 'list' || this.mode === 'timeline'
 		},
 		calendars() {
 			if (this.$route.params.calendarId) {
@@ -78,7 +78,8 @@ export default {
 			if (!this.hasTree) {
 				return []
 			}
-			const tasks = viewFoldableTasks(this.mode, this.calendars, this.$route.params.collectionId || null, {
+			// The timeline shows the same tree as the table
+			const tasks = viewFoldableTasks(this.mode === 'timeline' ? 'table' : this.mode, this.calendars, this.$route.params.collectionId || null, {
 				showClosed: this.$store.getters.tbShowClosed,
 			})
 			// Subtasks hidden with the menu entry of the task are stored in the task, so only when it may be changed
@@ -94,7 +95,7 @@ export default {
 		 */
 		searching() {
 			const { searchQuery, filter } = this.$store.getters
-			return this.mode === 'table' ? isFiltering(searchQuery, filter) : !!searchQuery
+			return this.mode === 'list' ? !!searchQuery : isFiltering(searchQuery, filter)
 		},
 		allOpen() {
 			return this.visible && this.tasks.every(this.isOpen)
@@ -108,6 +109,9 @@ export default {
 			if (this.mode === 'table') {
 				return this.$store.getters.isTbTableExpanded(task.key)
 			}
+			if (this.mode === 'timeline') {
+				return !this.$store.getters.isTbTimelineCollapsed(task.key)
+			}
 			return !this.$store.getters.isTbCollapsed(task.key) && !task.hideSubtasks
 		},
 		toggle() {
@@ -115,6 +119,10 @@ export default {
 			const keys = this.tasks.map(task => task.key)
 			if (this.mode === 'table') {
 				this.$store.commit('setTbTableExpanded', { keys, expanded: open })
+				return
+			}
+			if (this.mode === 'timeline') {
+				this.$store.commit('setTbTimelineCollapsed', { keys, collapsed: !open })
 				return
 			}
 			if (open) {

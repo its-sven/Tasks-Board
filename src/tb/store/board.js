@@ -8,6 +8,8 @@ import client from '../../services/cdav.js'
 import Requests from '../../services/requests.js'
 import { Calendar } from '../../store/calendars.js'
 import { waitingTag, isWaitingTagName, hasWaitingTag, startsInFuture, parseViews, patchViews, viewFor } from '../board.js'
+import { shiftedDates } from '../timeline.js'
+import { setFutureStartWaits } from '../waiting.js'
 import { findVTODObyState } from '../../store/cdav-requests.js'
 import { splitTasks, uidOf } from '../import.js'
 import { orderedEntries } from '../navigation.js'
@@ -28,6 +30,7 @@ export function isTaskReadOnly(task) {
 const EXPANDED_STORAGE_KEY = 'tasks_board.expandedCards'
 const COLLAPSED_STORAGE_KEY = 'tasks_board.collapsedTasks'
 const TABLE_EXPANDED_STORAGE_KEY = 'tasks_board.tableExpanded'
+const TIMELINE_COLLAPSED_STORAGE_KEY = 'tasks_board.timelineCollapsed'
 const KEYS_LIMIT = 300
 
 /**
@@ -83,6 +86,8 @@ const state = {
 	collapsedTasks: loadKeys(COLLAPSED_STORAGE_KEY),
 	/** Table rows with opened subtasks (task.key => true) */
 	tableExpanded: loadKeys(TABLE_EXPANDED_STORAGE_KEY),
+	/** Timeline rows with closed subtasks (task.key => true) */
+	timelineCollapsed: loadKeys(TIMELINE_COLLAPSED_STORAGE_KEY),
 	/** Target list for new tasks chosen in a single list view (only until reload) */
 	targetOverrides: {},
 }
@@ -143,6 +148,23 @@ const mutations = {
 		}
 		state.tableExpanded = result
 		saveKeys(TABLE_EXPANDED_STORAGE_KEY, result)
+	},
+
+	/**
+	 * Opens or closes the subtasks of timeline rows
+	 *
+	 * @param {object} state The module state
+	 * @param {object} data Destructuring object
+	 * @param {string[]} data.keys The keys of the tasks
+	 * @param {boolean|null} data.collapsed New state, null = toggle
+	 */
+	setTbTimelineCollapsed(state, { keys, collapsed = null }) {
+		let result = state.timelineCollapsed
+		for (const key of keys) {
+			result = switchKey(result, key, collapsed)
+		}
+		state.timelineCollapsed = result
+		saveKeys(TIMELINE_COLLAPSED_STORAGE_KEY, result)
 	},
 
 	/**
@@ -260,6 +282,7 @@ const getters = {
 	 */
 	tbNavigationOrder: (state, getters, rootState) => orderedEntries(rootState.collections.collections.map(collection => collection.id), getters.tbPrefs.collectionOrder),
 	isTbTableExpanded: (state) => (key) => !!state.tableExpanded[key],
+	isTbTimelineCollapsed: (state) => (key) => !!state.timelineCollapsed[key],
 
 	/**
 	 * The list new tasks from the header input go to.
@@ -304,6 +327,11 @@ export function tbUiPlugin(store) {
 		},
 		{ immediate: true },
 	)
+	store.watch(
+		() => store.getters.tbPrefs.futureStartWaits,
+		setFutureStartWaits,
+		{ immediate: true },
+	)
 }
 
 const actions = {
@@ -317,6 +345,57 @@ const actions = {
 	 */
 	setTbShowClosed({ dispatch }, show) {
 		return dispatch('setSetting', { type: 'showHidden', value: show ? 1 : 0 })
+	},
+
+	/**
+	 * Moves the dates of a task on the timeline by whole days, a main task
+	 * together with its subtasks
+	 *
+	 * @param {object} context The store context
+	 * @param {object} data Destructuring object
+	 * @param {object} data.task The task
+	 * @param {number} data.days Days to move (negative: earlier)
+	 * @param {string} data.edge 'move' (start and due), 'start' or 'end'
+	 * @param {boolean} data.withSubtasks Move the subtasks as well (only with 'move')
+	 * @return {Promise<number>} The number of tasks changed
+	 */
+	async tbShiftDates(context, { task, days, edge = 'move', withSubtasks = false }) {
+		const tasks = [task]
+		if (withSubtasks && edge === 'move') {
+			const seen = new Set([task.key])
+			for (let i = 0; i < tasks.length; i++) {
+				for (const child of Object.values(tasks[i].subTasks || {})) {
+					if (!seen.has(child.key)) {
+						seen.add(child.key)
+						tasks.push(child)
+					}
+				}
+			}
+		}
+		let changed = 0
+		for (const item of tasks) {
+			if (isTaskReadOnly(item) || item.isRecurring) {
+				continue
+			}
+			const { start, due } = shiftedDates(item, days, edge)
+			if (!start && !due) {
+				continue
+			}
+			const allDay = item.allDay
+			// Later: due first, earlier: start first, so the two never cross on the way
+			if (days > 0 && due) {
+				context.commit('setDue', { task: item, due, allDay })
+			}
+			if (start) {
+				context.commit('setStart', { task: item, start, allDay })
+			}
+			if (days < 0 && due) {
+				context.commit('setDue', { task: item, due, allDay })
+			}
+			await context.dispatch('updateTask', item)
+			changed++
+		}
+		return changed
 	},
 
 	/**

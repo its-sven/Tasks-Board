@@ -4,7 +4,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 
 <!--
-Switch between list, board and table in the header (segmented control).
+Switch between list, board, table and timeline in the header (segmented control).
 The choice applies to all lists and collections.
 -->
 <template>
@@ -30,6 +30,7 @@ The choice applies to all lists and collections.
 import { viewKeyForRoute } from '../board.js'
 import { tbt } from '../l10n.js'
 
+import ChartGantt from 'vue-material-design-icons/ChartGantt.vue'
 import TableLarge from 'vue-material-design-icons/TableLarge.vue'
 import ViewColumnOutline from 'vue-material-design-icons/ViewColumnOutline.vue'
 import ViewListOutline from 'vue-material-design-icons/ViewListOutline.vue'
@@ -37,6 +38,7 @@ import ViewListOutline from 'vue-material-design-icons/ViewListOutline.vue'
 export default {
 	name: 'TbViewSwitch',
 	components: {
+		ChartGantt,
 		TableLarge,
 		ViewColumnOutline,
 		ViewListOutline,
@@ -53,6 +55,7 @@ export default {
 				{ mode: 'list', label: tbt('List'), icon: 'ViewListOutline' },
 				{ mode: 'board', label: tbt('Board'), icon: 'ViewColumnOutline' },
 				{ mode: 'table', label: tbt('Table'), icon: 'TableLarge' },
+				{ mode: 'timeline', label: tbt('Timeline'), icon: 'ChartGantt' },
 			]
 		},
 	},
@@ -114,10 +117,10 @@ export default {
 		}
 	}
 
-	// Narrow screens: icons only
+	// Narrow screens: icons only (four of them fit next to the other buttons on phones)
 	@media only screen and (max-width: 700px) {
 		&__option {
-			padding: 0 8px;
+			padding: 0 6px;
 		}
 
 		&__label {

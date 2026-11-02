@@ -1,5 +1,5 @@
 import { isTaskInList } from '../../../../src/store/storeHelper.js'
-import { defaultWaitingTag, hasWaitingTag, isFollowUpDue, isTaskWaiting, normalizeWaitingTag, setWaitingTag, waitingTag } from '../../../../src/tb/waiting.js'
+import { boardColumn, defaultWaitingTag, followUpState, hasWaitingTag, isFollowUpDue, isTaskWaiting, normalizeWaitingTag, setFutureStartWaits, setWaitingTag, waitingTag } from '../../../../src/tb/waiting.js'
 import { setWaiting } from '../../../../src/tb/progress.js'
 import { makeCalendar, makeTask } from './helpers.js'
 
@@ -84,5 +84,25 @@ describe('waiting - configurable tag', () => {
 			setWaitingTag('waiting')
 		}
 		expect(hasWaitingTag(custom)).toBe(false)
+	})
+})
+
+describe('waiting - start date in the future', () => {
+	it('makes a task wait unless switched off, the waiting tag always does', () => {
+		const cal = makeCalendar('f')
+		const now = moment('2026-11-02T10:00:00')
+		const planned = makeTask(cal, { uid: 'planned', start: moment('2026-11-20'), due: moment('2026-11-30') })
+		const tagged = makeTask(cal, { uid: 'tagged', start: moment('2026-11-20'), tags: [waitingTag()] })
+		expect(boardColumn(planned, now)).toBe('waiting')
+		expect(followUpState(planned, now)).toBe('pending')
+		setFutureStartWaits(false)
+		try {
+			expect(boardColumn(planned, now)).toBe('open')
+			expect(followUpState(planned, now)).toBeNull()
+			expect(boardColumn(tagged, now)).toBe('waiting')
+			expect(followUpState(tagged, now)).toBe('pending')
+		} finally {
+			setFutureStartWaits(true)
+		}
 	})
 })

@@ -80,7 +80,7 @@ export function shortcutsBlocked(event, doc = document) {
  * @return {string}
  */
 export function nextViewMode(mode) {
-	return { list: 'board', board: 'table', table: 'list' }[mode] || 'list'
+	return { list: 'board', board: 'table', table: 'timeline', timeline: 'list' }[mode] || 'list'
 }
 
 /**

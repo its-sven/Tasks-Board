@@ -66,8 +66,8 @@ describe('resize and view switch', () => {
 		expect(resolveDrag(300, { min: 300, max: 100, collapseBelow: 200 }).width).toBe(300)
 	})
 
-	it('B goes list → board → table → list', () => {
-		expect(['list', 'board', 'table', 'x'].map(nextViewMode)).toEqual(['board', 'table', 'list', 'list'])
+	it('B goes list → board → table → timeline → list', () => {
+		expect(['list', 'board', 'table', 'timeline', 'x'].map(nextViewMode)).toEqual(['board', 'table', 'timeline', 'list', 'list'])
 	})
 })
 

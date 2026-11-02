@@ -16,6 +16,12 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 			:collection-id="collectionId"
 			:view-key="viewKey" />
 	</div>
+	<div v-else-if="isTimeline">
+		<HeaderBar />
+		<TbTimeline :calendars="calendars"
+			:collection-id="collectionId"
+			:view-key="viewKey" />
+	</div>
 	<TbGroupedList v-else-if="grouping !== 'none' && collectionId !== 'week'"
 		:collection-id="collectionId"
 		:grouping="grouping" />
@@ -29,6 +35,7 @@ import { viewKeyForRoute } from '../board.js'
 import TbBoard from '../components/TbBoard.vue'
 import TbGroupedList from '../components/TbGroupedList.vue'
 import TbTable from '../components/TbTable.vue'
+import TbTimeline from '../components/TbTimeline.vue'
 import currentKey from './currentKey.js'
 
 export default {
@@ -39,6 +46,7 @@ export default {
 		TbBoard,
 		TbGroupedList,
 		TbTable,
+		TbTimeline,
 	},
 	mixins: [currentKey],
 	props: {
@@ -70,6 +78,9 @@ export default {
 		},
 		isTable() {
 			return !!this.viewKey && this.$store.getters.tbView(this.viewKey).mode === 'table'
+		},
+		isTimeline() {
+			return !!this.viewKey && this.$store.getters.tbView(this.viewKey).mode === 'timeline'
 		},
 	},
 }

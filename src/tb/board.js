@@ -418,7 +418,7 @@ export function parseViews(value) {
 export const GLOBAL_VIEW_KEY = '*'
 
 /** Views of a list or collection */
-export const VIEW_MODES = ['list', 'board', 'table']
+export const VIEW_MODES = ['list', 'board', 'table', 'timeline']
 
 /**
  * Returns the view settings for a key, filled with defaults.

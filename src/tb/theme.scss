@@ -151,6 +151,11 @@ $breakpoint-mobile: 1024px;
 		@media only screen and (max-width: $breakpoint-mobile) {
 			padding-right: 8px;
 
+			// Phones: a little less room between the buttons, so they fit in one row
+			@media only screen and (max-width: 600px) {
+				column-gap: 4px;
+			}
+
 			// Room for the navigation toggle only next to the input, so the
 			// buttons below it get the full width (one row on phones)
 			&:has(> .header__input) {

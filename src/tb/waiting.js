@@ -58,6 +58,16 @@ export function setWaitingTag(tag) {
 	}
 }
 
+/** Whether a start date in the future makes a task wait (preference, reactive) */
+const futureStartWaits = ref(true)
+
+/**
+ * @param {boolean} waits Whether a start date in the future makes a task wait
+ */
+export function setFutureStartWaits(waits) {
+	futureStartWaits.value = waits !== false
+}
+
 /**
  * @param {string} tag The tag
  * @return {boolean} Whether this is the waiting tag (case-insensitive)
@@ -91,7 +101,7 @@ export function startsInFuture(task, now = moment()) {
  * @return {string|null} 'pending', 'reached', 'noDate' or null if the task is not waiting
  */
 export function followUpState(task, now = moment()) {
-	if (startsInFuture(task, now)) {
+	if (startsInFuture(task, now) && (futureStartWaits.value || hasWaitingTag(task))) {
 		return 'pending'
 	}
 	if (!hasWaitingTag(task)) {
@@ -114,7 +124,7 @@ export function boardColumn(task, now = moment()) {
 	if (task.completed) {
 		return 'done'
 	}
-	if (hasWaitingTag(task) || startsInFuture(task, now)) {
+	if (hasWaitingTag(task) || (futureStartWaits.value && startsInFuture(task, now))) {
 		return 'waiting'
 	}
 	if (task.status === 'IN-PROCESS' || task.complete > 0) {

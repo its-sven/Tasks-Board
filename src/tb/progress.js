@@ -24,6 +24,8 @@ export const DEFAULT_PREFS = Object.freeze({
 	notifyDue: true,
 	// A click on a task in the Calendar app opens it here (see src/calendar.js)
 	openFromCalendar: true,
+	// A start date in the future makes a task wait (board column, collection "Waiting")
+	futureStartWaits: true,
 	// Template list: '' = the list named "Vorlagen" or "Templates", 'none' = no template list, otherwise the list id
 	templateCalendarId: '',
 	// View: list style 'cards', 'rows' or 'compact'
