@@ -1,10 +1,12 @@
 import { homeChanges, LiveSync, normalizeHref, parseSyncResponse, parseTokens, planChanges } from '../../../../src/tb/live.js'
 
+import Axios from '@nextcloud/axios'
 import { listen } from '@nextcloud/notify_push'
 
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@nextcloud/notify_push', () => ({ listen: vi.fn(() => true) }))
+vi.mock('@nextcloud/axios', () => ({ default: vi.fn() }))
 
 const XML = `<?xml version="1.0"?>
 <d:multistatus xmlns:d="DAV:" xmlns:s="http://sabredav.org/ns">
@@ -94,5 +96,21 @@ describe('live updates', () => {
 		sync.onPush()
 		expect(run).toHaveBeenCalledWith({ force: true })
 		sync.stop()
+	})
+
+	it('compares only lists with tasks, not calendars with events only', async () => {
+		const home = '/remote.php/dav/calendars/admin/'
+		const list = (id, supportsTasks) => ({ id, supportsTasks, tasks: {}, dav: { url: home + id + '/', syncToken: 'old' } })
+		const work = list('work', true)
+		const events = list('events', false)
+		Axios.mockResolvedValue({
+			data: `<?xml version="1.0"?>
+<d:multistatus xmlns:d="DAV:">
+ <d:response><d:href>${home}work/</d:href><d:propstat><d:prop><d:sync-token>new1</d:sync-token></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+ <d:response><d:href>${home}events/</d:href><d:propstat><d:prop><d:sync-token>new2</d:sync-token></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>
+</d:multistatus>`,
+		})
+		const sync = new LiveSync({ state: { calendars: { calendars: [work, events] } } })
+		expect(await sync.changedCalendars([work, events])).toEqual([work])
 	})
 })

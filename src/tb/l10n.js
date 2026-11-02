@@ -306,6 +306,8 @@ const translations = {
 		Show: 'Anzeigen',
 		'Could not load the completed tasks.': 'Die erledigten Aufgaben konnten nicht geladen werden.',
 		'The list "{list}" is no longer available.': 'Die Liste „{list}“ ist nicht mehr verfügbar.',
+		'Open tasks from the Calendar app in Tasks Board': 'Aufgaben aus dem Kalender in Tasks Board öffnen',
+		'Instead of the Tasks app. Applies when the Calendar is opened the next time.': 'Statt in der App Aufgaben. Gilt, sobald der Kalender das nächste Mal geöffnet wird.',
 		'Move up: {name}': 'Nach oben: {name}',
 		'Move up': 'Nach oben',
 		'Move down: {name}': 'Nach unten: {name}',

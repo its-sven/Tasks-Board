@@ -21,6 +21,14 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 			@update:model-value="set({ inheritFromParent: $event })">
 			{{ tbt('New subtasks take over priority, tags and assigned person of the main task') }}
 		</NcCheckboxRadioSwitch>
+		<NcCheckboxRadioSwitch type="switch"
+			:model-value="prefs.openFromCalendar"
+			@update:model-value="set({ openFromCalendar: $event })">
+			{{ tbt('Open tasks from the Calendar app in Tasks Board') }}
+		</NcCheckboxRadioSwitch>
+		<p class="tb-settings__hint">
+			{{ tbt('Instead of the Tasks app. Applies when the Calendar is opened the next time.') }}
+		</p>
 
 		<NcButton variant="tertiary" class="tb-settings__shortcuts" @click="showShortcuts">
 			<template #icon>

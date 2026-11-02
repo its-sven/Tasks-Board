@@ -1,3 +1,11 @@
+## 1.2.2 - 2026-11-02
+
+### Added
+- A click on a task in the Calendar app opens it in Tasks Board instead of the Tasks app, also when the Tasks app is enabled. It can be switched off in the settings ("Open tasks from the Calendar app in Tasks Board")
+
+### Fixed
+- Live updates no longer compare calendars that only contain events, so a changed appointment does not cause requests anymore
+
 ## 1.2.1 - 2026-10-29
 
 ### Changed

@@ -22,6 +22,8 @@ export const DEFAULT_PREFS = Object.freeze({
 	notifyCompleted: true,
 	notifyFollowUp: true,
 	notifyDue: true,
+	// A click on a task in the Calendar app opens it here (see src/calendar.js)
+	openFromCalendar: true,
 	// Template list: '' = the list named "Vorlagen" or "Templates", 'none' = no template list, otherwise the list id
 	templateCalendarId: '',
 	// View: list style 'cards', 'rows' or 'compact'

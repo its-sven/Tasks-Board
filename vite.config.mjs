@@ -5,6 +5,8 @@ export default createAppConfig({
 	main: 'src/main.js',
 	dashboard: 'src/dashboard.js',
 	talk: 'src/talk.js',
+	// Tasks Board: opens tasks clicked in the Calendar app
+	calendar: 'src/calendar.js',
 }, {
 	config: {
 		test: {

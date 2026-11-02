@@ -389,9 +389,10 @@ export class LiveSync {
 
 	/**
 	 * The lists that changed since the last sync. New lists below a calendar
-	 * home are loaded, lists that are gone are removed.
+	 * home are loaded, lists that are gone are removed. Calendars without
+	 * tasks (only events) are known, but never synced.
 	 *
-	 * @param {Array} calendars All lists
+	 * @param {Array} calendars All lists and calendars
 	 * @return {Promise<Array>} The lists to sync
 	 */
 	async changedCalendars(calendars) {
@@ -414,7 +415,7 @@ export class LiveSync {
 				current = await requestTokens(home)
 			} catch (error) {
 				console.debug('Tasks Board: could not read the sync tokens', home, error)
-				result.push(...list)
+				result.push(...list.filter(calendar => calendar.supportsTasks))
 				continue
 			}
 			const { added, removed } = homeChanges(current, list, this.ignored)
@@ -425,7 +426,7 @@ export class LiveSync {
 				this.removeList(calendar)
 			}
 			for (const calendar of list) {
-				if (removed.includes(calendar)) {
+				if (removed.includes(calendar) || !calendar.supportsTasks) {
 					continue
 				}
 				const known = this.tokens.has(calendar.id) ? this.tokens.get(calendar.id) : calendar.dav.syncToken

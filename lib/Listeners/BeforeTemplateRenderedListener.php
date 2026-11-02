@@ -31,14 +31,21 @@ use OCA\TasksBoard\AppInfo\Application;
 use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
+use OCP\IConfig;
 use OCP\IRequest;
+use OCP\IUserSession;
 use OCP\Util;
 
 class BeforeTemplateRenderedListener implements IEventListener {
 	private $request;
+	// Tasks Board: for the preference of the Calendar app (see opensFromCalendar)
+	private $config;
+	private $userSession;
 
-	public function __construct(IRequest $request) {
+	public function __construct(IRequest $request, IConfig $config, IUserSession $userSession) {
 		$this->request = $request;
+		$this->config = $config;
+		$this->userSession = $userSession;
 	}
 
 	public function handle(Event $event): void {
@@ -56,5 +63,24 @@ class BeforeTemplateRenderedListener implements IEventListener {
 			Util::addStyle(Application::APP_ID, Application::APP_ID . '-talk');
 			Util::addStyle(Application::APP_ID, 'tasks-icon');
 		}
+
+		// Tasks Board: a click on a task in the Calendar app opens it in Tasks Board
+		if (strpos($pathInfo, '/apps/calendar') === 0 && $this->opensFromCalendar()) {
+			Util::addScript(Application::APP_ID, Application::APP_ID . '-calendar');
+		}
+	}
+
+	/**
+	 * Tasks Board: preference "Open tasks from the Calendar app in Tasks Board" (default: yes)
+	 *
+	 * @return bool
+	 */
+	private function opensFromCalendar(): bool {
+		$user = $this->userSession->getUser();
+		if ($user === null) {
+			return false;
+		}
+		$prefs = json_decode((string)$this->config->getUserValue($user->getUID(), Application::APP_ID, 'various_tbPrefs', '{}'), true);
+		return !is_array($prefs) || !array_key_exists('openFromCalendar', $prefs) || $prefs['openFromCalendar'] !== false;
 	}
 }

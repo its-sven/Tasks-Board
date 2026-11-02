@@ -114,6 +114,10 @@ In Nextcloud a list always belongs to one person, groups can only get shares. "A
 
 Use "Export" in the menu of a list and "Import tasks…" in the menu of the target list. The export contains the tasks as they are stored (person, tags, subtasks, order, reminders), the import keeps all of it. Settings like views and columns are not part of the file.
 
+### Which app opens when I click a task in the Calendar app?
+
+Tasks Board. The Calendar app links tasks to the Tasks app; Tasks Board takes over the click and opens the task in its own sidebar, whether the Tasks app is enabled or not. Switch it off in the settings with "Open tasks from the Calendar app in Tasks Board".
+
 ### Which apps sync with the task lists?
 
 Tasks Board stores everything in standard CalDAV tasks (VTODO). Assignments are written as `ATTENDEE` with `SCHEDULE-AGENT=CLIENT`, so the server does not send invitation e-mails. All CalDAV clients that work with Nextcloud Tasks work with Tasks Board too, for example Thunderbird, Apple Reminders, DAVx⁵ with [jtx Board](https://jtx.techbee.at/), [OpenTasks](https://opentasks.app/) or [Tasks.org](https://tasks.org/), GNOME, KDE and [vdirsyncer](https://vdirsyncer.pimutils.org/). See the [list in the Tasks app](https://github.com/nextcloud/tasks#apps-which-sync-with-nextcloud-tasks-using-caldav).
