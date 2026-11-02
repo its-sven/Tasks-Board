@@ -131,6 +131,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 import TaskCheckbox from '../../components/TaskCheckbox.vue'
 import { followUpState, isWaitingTagName, parentTask, priorityGroup } from '../board.js'
 import { shortDate } from '../dates.js'
+import { openPathKeys } from '../fold.js'
 import { tbt } from '../l10n.js'
 import { countTaskItems, noteExcerpt } from '../markdown.js'
 import { isTaskReadOnly } from '../store/board.js'
@@ -187,6 +188,12 @@ export default {
 		},
 	},
 	emits: ['open', 'toggleCompleted'],
+	data() {
+		return {
+			// Closed again with the arrow while the card is open for now
+			keepClosed: false,
+		}
+	},
 	computed: {
 		readOnly() {
 			return isTaskReadOnly(this.task)
@@ -251,7 +258,21 @@ export default {
 			return countTaskItems(this.task.note)
 		},
 		expanded() {
+			return this.expandedByHand || this.openForNow
+		},
+		expandedByHand() {
 			return !!this.$store.state.tbBoard.expandedCards[this.task.key]
+		},
+		/**
+		 * The task or one of its subtasks is open in the sidebar: subtasks shown until another task is opened
+		 *
+		 * @return {boolean}
+		 */
+		openForNow() {
+			if (this.keepClosed || !this.$route.params.taskId) {
+				return false
+			}
+			return openPathKeys(this.$store.getters.getTaskByRoute(this.$route)).has(this.task.key)
 		},
 		/** Subtasks in the order chosen for subtasks (open ones first) */
 		subtasks() {
@@ -265,11 +286,22 @@ export default {
 			return !!(this.followUp || this.dueString || this.subtaskCount.total || this.showProgress || this.checklist.total)
 		},
 	},
+	watch: {
+		'$route.params.taskId'() {
+			this.keepClosed = false
+		},
+	},
 	methods: {
 		tbt,
 		isWaitingTag: isWaitingTagName,
 		isReadOnly: isTaskReadOnly,
 		toggleExpanded() {
+			if (this.openForNow && !this.expandedByHand) {
+				// Close it again, it stays closed
+				this.keepClosed = true
+				return
+			}
+			this.keepClosed = false
 			this.$store.commit('toggleTbCardExpanded', this.task.key)
 		},
 		priorityClassOf(task) {

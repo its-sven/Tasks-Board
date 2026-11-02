@@ -1,3 +1,8 @@
+## 1.3.0 - unreleased
+
+### Changed
+- On the board, a click on a card opens its subtasks while the task is open in the sidebar, like in the list and the table; opened with the arrow, they stay open
+
 ## 1.2.2 - 2026-11-02
 
 ### Added
