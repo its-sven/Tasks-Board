@@ -42,7 +42,7 @@ Opens a small menu: stop waiting or set a new follow-up date.
 import { shortDate } from '../dates.js'
 import { tbt } from '../l10n.js'
 import { isTaskReadOnly } from '../store/board.js'
-import { followUpState } from '../waiting.js'
+import { followUpDate, followUpState } from '../waiting.js'
 
 import { showError } from '@nextcloud/dialogs'
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
@@ -88,7 +88,7 @@ export default {
 			return isTaskReadOnly(this.task)
 		},
 		date() {
-			return shortDate(this.task.startMoment)
+			return shortDate(followUpDate(this.task))
 		},
 		label() {
 			if (this.followUp === 'noDate') {

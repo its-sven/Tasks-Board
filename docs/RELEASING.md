@@ -16,10 +16,13 @@ git switch tasks-board
 git pull
 node scripts/bump-version.mjs 1.0.1        # sets the version, adds a CHANGELOG section
 # fill in CHANGELOG.md, remove empty headings
-git commit -am "Release 1.0.1"
+git commit -am "Tasks Board 1.0.1"
+git push
 git tag -a v1.0.1 -m "Tasks Board 1.0.1"
-git push --follow-tags
+git push origin v1.0.1
 ```
+
+Push only this one tag, never `git push --tags` or `--follow-tags`: the clone also holds the tags of Nextcloud Tasks, and GitHub starts no workflow when more than three tags are pushed at once.
 
 Follow the progress under **Actions → Release**. A tag with a suffix like `v1.1.0-beta.1` becomes a pre-release.
 

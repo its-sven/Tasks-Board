@@ -89,6 +89,9 @@ import Pencil from 'vue-material-design-icons/PencilOutline.vue'
 import { getCanonicalLocale, translate as t } from '@nextcloud/l10n'
 import { vOnClickOutside as ClickOutside } from '@vueuse/components'
 import AlarmRelativeTimeTimePickerModal from './AlarmRelativeTimePickerModal.vue'
+// Tasks Board: mark the follow-up reminder
+import { tbt } from '../../../tb/l10n.js'
+import { isFollowUpAlarm } from '../../../tb/waiting.js'
 
 export default {
 	name: 'AlarmListItem',
@@ -186,7 +189,9 @@ export default {
 			return new Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 		},
 		formattedAlarm() {
-			return formatAlarm(this.alarm, this.isAllDay, this.currentUserTimezone, this.locale)
+			const text = formatAlarm(this.alarm, this.isAllDay, this.currentUserTimezone, this.locale)
+			// Tasks Board: the reminder that holds the follow-up date
+			return isFollowUpAlarm(this.alarm.alarmComponent) ? tbt('Follow-up: {reminder}', { reminder: text }) : text
 		},
 	},
 	methods: {

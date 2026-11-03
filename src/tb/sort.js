@@ -9,12 +9,12 @@
 
 import { sort as upstreamSort } from '../store/storeHelper.js'
 import { assigneeOf } from './assignee.js'
-import { boardColumn, isWaitingTagName, parentTask, priorityGroup } from './board.js'
+import { boardColumn, followUpDate, followUpState, isWaitingTagName, parentTask, priorityGroup } from './board.js'
 
 import moment from '@nextcloud/moment'
 
 /** Sort orders added by Tasks Board */
-export const EXTRA_SORT_ORDERS = ['status', 'progress', 'assignee', 'calendar', 'parent']
+export const EXTRA_SORT_ORDERS = ['status', 'progress', 'assignee', 'calendar', 'parent', 'followUp']
 
 /** Order of the status groups (same as the board columns, active work first) */
 const STATUS_ORDER = ['inProgress', 'open', 'waiting', 'done', 'cancelled']
@@ -91,6 +91,12 @@ export function sort(tasks, sortOrder = 'default', sortDirection = false, now = 
 		comparator = (a, b) => (a.calendar?.displayName || '').localeCompare(b.calendar?.displayName || '')
 			|| byPriority(a, b) || bySummary(a, b)
 		break
+	case 'followUp': {
+		// Earliest follow-up first, tasks that do not wait last (table view)
+		const time = task => (followUpState(task, now) ? followUpDate(task, now)?.valueOf() : null) ?? Infinity
+		comparator = (a, b) => (time(a) - time(b) || 0) || byPriority(a, b) || bySummary(a, b)
+		break
+	}
 	case 'parent':
 		// Subtasks below their main task (table view)
 		comparator = (a, b) => {

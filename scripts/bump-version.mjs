@@ -57,4 +57,4 @@ if (new RegExp(`^## \\[?${escaped}\\]?( |$)`, 'm').test(changelog)) {
 }
 
 console.log(`Version ${before} -> ${version} in appinfo/info.xml, package.json and package-lock.json`)
-console.log(`Next: commit, then git tag -a v${version} -m "Tasks Board ${version}" and git push --follow-tags`)
+console.log(`Next: commit and git push, then git tag -a v${version} -m "Tasks Board ${version}" and git push origin v${version} (only this tag, never --tags)`)

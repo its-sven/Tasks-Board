@@ -17,7 +17,7 @@ On top of the familiar task list it adds:
 - **Live updates:** changes by others, from other windows or from CalDAV clients appear without reloading, and so do lists that are new, shared with you or deleted. With Client Push (notify_push) changes in shared lists appear right away.
 - **Lists for a group:** create a list and share it with a group in one step.
 - **Import** of iCalendar files (.ics) into a list with all information, for example the export of another list.
-- **Waiting and follow-up:** mark a task as waiting until a date and get a reminder when the date is reached. Administrators can choose the waiting tag.
+- **Waiting and follow-up:** mark a task as waiting until a date and get a reminder on that day; start and due date stay as planned. Administrators can choose the waiting tag.
 - **Templates:** copy a task with all its subtasks from a template list.
 - **Fixed tag list** that is suggested to everyone (set by administrators).
 - **Notes editor** with a Markdown toolbar and checklists you can tick off directly.
@@ -38,7 +38,7 @@ Zusätzlich zur gewohnten Aufgabenliste gibt es:
 - **Live-Aktualisierung:** Änderungen anderer, aus anderen Fenstern oder aus CalDAV-Programmen erscheinen ohne Neuladen, ebenso neue, mit dir geteilte oder gelöschte Listen. Mit Client Push (notify_push) erscheinen Änderungen in geteilten Listen sofort.
 - **Listen für eine Gruppe:** Liste anlegen und gleich mit einer Gruppe teilen.
 - **Import** von iCalendar-Dateien (.ics) in eine Liste mit allen Angaben, zum Beispiel der Export einer anderen Liste.
-- **Wartet und Wiedervorlage:** Aufgabe bis zu einem Datum warten lassen und am Tag erinnert werden. Den Warte-Tag legen Administratoren fest.
+- **Wartet und Wiedervorlage:** Aufgabe bis zu einem Datum warten lassen und an diesem Tag erinnert werden; Start und Fälligkeit bleiben geplant. Den Warte-Tag legen Administratoren fest.
 - **Vorlagen:** Aufgabe samt Unteraufgaben aus einer Vorlagen-Liste kopieren.
 - **Feste Tag-Liste**, die allen zuerst vorgeschlagen wird (von Administratoren gepflegt).
 - **Notiz-Editor** mit Markdown-Werkzeugleiste und Checklisten, die sich direkt abhaken lassen.
@@ -47,7 +47,7 @@ Zusätzlich zur gewohnten Aufgabenliste gibt es:
 Aufgaben lassen sich wie mit der Tasks-App mit jedem CalDAV-Programm synchronisieren (Thunderbird, Evolution, KDE Kontact, DAVx⁵ …).
 
 Tasks Board ist ein unabhängiges Projekt und gehört nicht zur Nextcloud GmbH.]]></description>
-    <version>1.3.0</version>
+    <version>1.4.0</version>
     <licence>AGPL-3.0-or-later</licence>
     <author>Sven Würth</author>
     <author mail="raimund.schluessler@mailbox.org" homepage="https://github.com/nextcloud/tasks">Raimund Schlüßler (Nextcloud Tasks)</author>

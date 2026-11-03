@@ -90,6 +90,10 @@ On phones the timeline is only shown, not changed.
 								@click="openTask(row.task)">
 								{{ row.task.summary }}
 							</span>
+							<TimerSandEmpty v-if="row.waiting"
+								:size="14"
+								class="tb-timeline__waiting-icon"
+								:title="tbt('Waiting')" />
 							<span v-if="row.task.complete > 0" class="tb-timeline__percent">{{ row.task.complete }} %</span>
 							<TbAvatar v-if="row.assignee" :person="row.assignee" :size="20" />
 						</div>
@@ -103,6 +107,7 @@ On phones the timeline is only shown, not changed.
 									'tb-timeline__bar--cut-start': cut(row).cutStart,
 									'tb-timeline__bar--cut-end': cut(row).cutEnd,
 									'tb-timeline__bar--closed': row.task.closed,
+									'tb-timeline__bar--waiting': row.waiting,
 									'tb-timeline__bar--editable': row.editable,
 									'tb-timeline__bar--dragged': drag && drag.keys.has(row.task.key),
 								}"
@@ -120,6 +125,17 @@ On phones the timeline is only shown, not changed.
 								</template>
 								<AlertCircleOutline v-if="row.outside" :size="14" class="tb-timeline__warn" />
 							</div>
+							<!-- Follow-up: a reminder on its own day, independent of the bar -->
+							<span v-if="row.followUp && followUpLeft(row) !== null"
+								class="tb-timeline__followup"
+								:class="{ 'tb-timeline__followup--due': row.followUpDue }"
+								:style="{ left: followUpLeft(row) + 'px' }"
+								:title="followUpTitle(row)"
+								@pointerdown.stop
+								@click="openTask(row.task)">
+								<BellAlertOutline v-if="row.followUpDue" :size="14" />
+								<BellOutline v-else :size="14" />
+							</span>
 						</div>
 					</div>
 				</div>
@@ -140,6 +156,12 @@ On phones the timeline is only shown, not changed.
 			<span class="tb-timeline__legend-entry tb-timeline__legend-entry--hint">
 				<AlertCircleOutline :size="14" class="tb-timeline__warn" /> {{ tbt('Outside the main task') }}
 			</span>
+			<span v-if="rows.some(row => row.waiting)" class="tb-timeline__legend-entry tb-timeline__legend-entry--hint">
+				<span class="tb-timeline__legend-waiting" /> {{ tbt('Waiting') }}
+			</span>
+			<span v-if="rows.some(row => row.followUp)" class="tb-timeline__legend-entry tb-timeline__legend-entry--hint">
+				<span class="tb-timeline__followup tb-timeline__followup--legend"><BellOutline :size="14" /></span> {{ tbt('Follow-up') }}
+			</span>
 		</div>
 	</div>
 </template>
@@ -153,6 +175,7 @@ import { isTaskReadOnly } from '../store/board.js'
 import { STATUS } from '../status.js'
 import { treeRows } from '../table.js'
 import { barGeometry, DEFAULT_SCALE, dragDays, headerCells, outsideParent, rowSpan, SCALES, visibleRange } from '../timeline.js'
+import { followUpDate, followUpState } from '../waiting.js'
 import TbAvatar from './TbAvatar.vue'
 import { uidToHexColor } from '../../utils/color.js'
 
@@ -161,7 +184,10 @@ import moment from '@nextcloud/moment'
 import NcButton from '@nextcloud/vue/components/NcButton'
 
 import AlertCircleOutline from 'vue-material-design-icons/AlertCircleOutline.vue'
+import BellAlertOutline from 'vue-material-design-icons/BellAlertOutline.vue'
+import BellOutline from 'vue-material-design-icons/BellOutline.vue'
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue'
+import TimerSandEmpty from 'vue-material-design-icons/TimerSandEmpty.vue'
 
 import { mapGetters } from 'vuex'
 
@@ -178,9 +204,12 @@ export default {
 	name: 'TbTimeline',
 	components: {
 		AlertCircleOutline,
+		BellAlertOutline,
+		BellOutline,
 		ChevronRight,
 		NcButton,
 		TbAvatar,
+		TimerSandEmpty,
 	},
 	props: {
 		calendars: {
@@ -286,11 +315,13 @@ export default {
 				}
 				return spans.get(task.key)
 			}
+			// Without dates a task is placed by its follow-up
+			const firstDay = task => spanOf(task)?.start || this.followUpOf(task)
 			const order = tasks => [...tasks].sort((a, b) => {
-				const sa = spanOf(a)
-				const sb = spanOf(b)
-				if (sa && sb && !sa.start.isSame(sb.start, 'day')) {
-					return sa.start.diff(sb.start)
+				const sa = firstDay(a)
+				const sb = firstDay(b)
+				if (sa && sb && !sa.isSame(sb, 'day')) {
+					return sa.diff(sb)
 				}
 				if (!sa !== !sb) {
 					return sa ? -1 : 1
@@ -311,12 +342,16 @@ export default {
 				const span = spanOf(entry.task)
 				const parent = parents[entry.depth - 1] || null
 				parents[entry.depth] = { span }
-				if (!span && !this.showUndated) {
+				const followUp = this.followUpOf(entry.task)
+				if (!span && !followUp && !this.showUndated) {
 					continue
 				}
 				rows.push({
 					...entry,
 					span,
+					followUp,
+					followUpDue: !!followUp && !followUp.isAfter(this.now, 'day'),
+					waiting: !entry.task.closed && boardColumn(entry.task, this.now) === 'waiting',
 					outside: outsideParent(span, parent && parent.span),
 					assignee: assigneeOf(entry.task),
 					color: this.colorOf(entry.task),
@@ -326,7 +361,8 @@ export default {
 			return rows
 		},
 		range() {
-			return visibleRange(this.rows.map(row => row.span), this.now)
+			const followUps = this.rows.filter(row => row.followUp).map(row => ({ start: row.followUp, end: row.followUp }))
+			return visibleRange([...this.rows.map(row => row.span), ...followUps], this.now)
 		},
 		timelineWidth() {
 			return this.range.days * this.dayWidth
@@ -431,6 +467,28 @@ export default {
 			}
 			return task.calendar.color || 'var(--color-primary-element)'
 		},
+		/**
+		 * @param {object} task The task
+		 * @return {moment|null} The follow-up day of an open waiting task
+		 */
+		followUpOf(task) {
+			return !task.closed && followUpState(task, this.now) ? followUpDate(task, this.now) : null
+		},
+		/**
+		 * @param {object} row The row
+		 * @return {number|null} Position of the follow-up mark (middle of its day), null outside the days shown
+		 */
+		followUpLeft(row) {
+			const day = row.followUp.diff(this.range.start, 'days')
+			if (day < 0 || day >= this.range.days) {
+				return null
+			}
+			return day * this.dayWidth + this.dayWidth / 2
+		},
+		followUpTitle(row) {
+			const date = row.followUp.format('L')
+			return row.task.summary + ' · ' + (row.followUpDue ? tbt('Follow-up reached {date}', { date }) : tbt('Follow-up on {date}', { date }))
+		},
 		canEdit(task, span) {
 			return !this.touch && !!span && !isTaskReadOnly(task) && !task.isRecurring
 		},
@@ -465,6 +523,9 @@ export default {
 			const format = date => date.format('L')
 			const dates = row.span.milestone ? format(row.span.start) : format(row.span.start) + ' – ' + format(row.span.end)
 			const parts = [row.task.summary, dates]
+			if (row.waiting) {
+				parts.push(row.followUp ? tbt('Waiting until {date}', { date: row.followUp.format('L') }) : tbt('Waiting'))
+			}
 			if (row.span.derived) {
 				parts.push(tbt('From the subtasks'))
 			}
@@ -840,6 +901,13 @@ export default {
 			opacity: .55;
 		}
 
+		// Waiting: striped, the plan stays visible
+		&--waiting:not(.tb-timeline__bar--milestone) {
+			background-image: repeating-linear-gradient(135deg,
+				transparent 0 5px,
+				color-mix(in srgb, var(--tb-bar) 35%, transparent) 5px 8px);
+		}
+
 		&--outside {
 			outline: 2px solid var(--tb-viz-overdue);
 			outline-offset: 1px;
@@ -897,6 +965,42 @@ export default {
 		}
 	}
 
+	&__waiting-icon {
+		flex: 0 0 auto;
+		color: var(--tb-viz-waiting);
+	}
+
+	&__followup {
+		position: absolute;
+		top: 50%;
+		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 22px;
+		height: 22px;
+		margin-left: -11px;
+		transform: translateY(-50%);
+		border: 1px solid var(--tb-viz-waiting);
+		border-radius: 50%;
+		background-color: var(--tb-card-bg, var(--color-main-background));
+		color: var(--tb-viz-waiting);
+		cursor: pointer;
+
+		&--due {
+			border-color: var(--tb-viz-overdue);
+			color: var(--tb-viz-overdue);
+		}
+
+		&--legend {
+			position: static;
+			width: 18px;
+			height: 18px;
+			margin: 0;
+			transform: none;
+		}
+	}
+
 	&__warn {
 		position: absolute;
 		top: 50%;
@@ -942,6 +1046,16 @@ export default {
 		height: 10px;
 		border: 1px dashed var(--color-text-maxcontrast);
 		border-radius: 3px;
+	}
+
+	&-waiting {
+		width: 22px;
+		height: 10px;
+		border: 1px solid var(--color-text-maxcontrast);
+		border-radius: 3px;
+		background-image: repeating-linear-gradient(135deg,
+			transparent 0 3px,
+			color-mix(in srgb, var(--color-text-maxcontrast) 45%, transparent) 3px 5px);
 	}
 }
 </style>

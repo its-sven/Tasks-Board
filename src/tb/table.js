@@ -15,8 +15,9 @@
 export const TABLE_COLUMNS = Object.freeze([
 	{ key: 'summary', label: 'Task', sort: 'alphabetically', visible: true, fixed: true },
 	{ key: 'assignee', label: 'Assigned to', sort: 'assignee', visible: true },
-	{ key: 'start', label: 'Start / follow-up', sort: 'start', visible: true },
+	{ key: 'start', label: 'Start', sort: 'start', visible: true },
 	{ key: 'due', label: 'Due', sort: 'due', visible: true },
+	{ key: 'followUp', label: 'Follow-up', sort: 'followUp', visible: true },
 	{ key: 'calendar', label: 'List', sort: 'calendar', visible: true },
 	{ key: 'parent', label: 'Main task', sort: 'parent', visible: false },
 	{ key: 'status', label: 'Status', sort: 'status', visible: true },
@@ -32,7 +33,8 @@ const BY_KEY = Object.fromEntries(TABLE_COLUMNS.map(column => [column.key, colum
 
 /**
  * Columns in the stored order with their visibility. Unknown entries are
- * dropped, new columns are added with their default. The task name stays first.
+ * dropped, new columns are added with their default, next to the column they
+ * follow by default. The task name stays first.
  *
  * @param {Array|undefined} stored [{ key, visible }] from the preferences
  * @return {Array} Columns ({ ...definition, visible })
@@ -48,11 +50,12 @@ export function normalizeColumns(stored) {
 		seen.add(definition.key)
 		result.push({ ...definition, visible: definition.fixed ? true : entry.visible !== false })
 	}
-	for (const definition of TABLE_COLUMNS) {
+	TABLE_COLUMNS.forEach((definition, index) => {
 		if (!seen.has(definition.key)) {
-			result.push({ ...definition })
+			const before = index > 0 ? result.findIndex(column => column.key === TABLE_COLUMNS[index - 1].key) : -1
+			result.splice(before + 1, 0, { ...definition })
 		}
-	}
+	})
 	const summary = result.findIndex(column => column.key === 'summary')
 	if (summary > 0) {
 		result.unshift(...result.splice(summary, 1))

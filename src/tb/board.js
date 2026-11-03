@@ -15,10 +15,10 @@ import { getCurrentUser } from '@nextcloud/auth'
 
 import moment from '@nextcloud/moment'
 
-import { boardColumn, followUpState, hasWaitingTag, isWaitingTagName, setWaitingTag, startsInFuture, waitingTag } from './waiting.js'
+import { boardColumn, followUpDate, followUpState, hasWaitingTag, isWaitingTagName, setWaitingTag, startsInFuture, waitingTag } from './waiting.js'
 
 // Kept here as well, other modules import them from board.js
-export { boardColumn, followUpState, hasWaitingTag, isWaitingTagName, setWaitingTag, startsInFuture, waitingTag }
+export { boardColumn, followUpDate, followUpState, hasWaitingTag, isWaitingTagName, setWaitingTag, startsInFuture, waitingTag }
 
 /** Columns in display order */
 export const COLUMNS = ['open', 'inProgress', 'waiting', 'done', 'cancelled']
@@ -200,11 +200,12 @@ export function sortColumn(column, tasks, sortOrder = 'default', sortDirection =
 	}
 	if (column === 'waiting' && sortOrder !== 'manual') {
 		// Earliest follow-up first, tasks without date last
+		const time = task => followUpDate(task)?.valueOf() ?? Infinity
 		return [...tasks].sort((a, b) => {
-			const aStart = a.startMoment.isValid() ? a.startMoment.valueOf() : Infinity
-			const bStart = b.startMoment.isValid() ? b.startMoment.valueOf() : Infinity
-			if (aStart !== bStart) {
-				return aStart - bStart
+			const aTime = time(a)
+			const bTime = time(b)
+			if (aTime !== bTime) {
+				return aTime - bTime
 			}
 			return a.summary.localeCompare(b.summary)
 		})

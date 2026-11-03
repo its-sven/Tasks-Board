@@ -8,8 +8,9 @@ import client from '../../services/cdav.js'
 import Requests from '../../services/requests.js'
 import { Calendar } from '../../store/calendars.js'
 import { waitingTag, isWaitingTagName, hasWaitingTag, startsInFuture, parseViews, patchViews, viewFor } from '../board.js'
+import { tbt } from '../l10n.js'
 import { shiftedDates } from '../timeline.js'
-import { setFutureStartWaits } from '../waiting.js'
+import { hasFollowUpAlarm, setFutureStartWaits, waitsForStart, writeFollowUpAlarm } from '../waiting.js'
 import { findVTODObyState } from '../../store/cdav-requests.js'
 import { splitTasks, uidOf } from '../import.js'
 import { orderedEntries } from '../navigation.js'
@@ -25,6 +26,62 @@ import { generateUrl } from '@nextcloud/router'
  */
 export function isTaskReadOnly(task) {
 	return task.calendar.readOnly || (task.calendar.isSharedWithMe && task.class !== 'PUBLIC')
+}
+
+/**
+ * Lets a task wait until a day: waiting tag and follow-up reminder. A task that
+ * waited by the old rule (waiting tag, no reminder) had its follow-up date in the
+ * start date; that date moves into the reminder.
+ *
+ * @param {Function} commit The store commit
+ * @param {object} task The task
+ * @param {Date|moment} date The follow-up day
+ */
+function startWaiting(commit, task, date) {
+	if (hasWaitingTag(task)) {
+		if (!hasFollowUpAlarm(task) && task.startMoment.isValid()) {
+			commit('setStart', { task, start: null })
+		}
+	} else {
+		commit('setTags', { task, tags: task.tags.concat([waitingTag()]) })
+	}
+	commit('tbSetFollowUp', { task, date })
+}
+
+/**
+ * Ends waiting: removes the waiting tag and the follow-up reminder. A start date
+ * in the future
+ * - that was the follow-up date by the old rule (waiting tag, no reminder) is removed,
+ * - that would still make the task wait (setting "start in the future waits")
+ *   moves to today: the task starts now, the plan keeps its due date,
+ * - otherwise stays: it is the planned start.
+ *
+ * @param {Function} commit The store commit
+ * @param {object} task The task
+ * @param {moment} now The current time
+ * @return {boolean} Whether something changed
+ */
+function endWaiting(commit, task, now = moment()) {
+	const tagged = hasWaitingTag(task)
+	const reminder = hasFollowUpAlarm(task)
+	const oldFollowUp = tagged && !reminder && startsInFuture(task, now)
+	let changed = false
+	if (tagged) {
+		commit('setTags', { task, tags: task.tags.filter(tag => !isWaitingTagName(tag)) })
+		changed = true
+	}
+	if (reminder) {
+		commit('tbSetFollowUp', { task, date: null })
+		changed = true
+	}
+	if (oldFollowUp) {
+		commit('setStart', { task, start: null })
+		changed = true
+	} else if (waitsForStart(task, now)) {
+		commit('setStart', { task, start: now.clone().startOf('day'), allDay: task.allDay })
+		changed = true
+	}
+	return changed
 }
 
 const EXPANDED_STORAGE_KEY = 'tasks_board.expandedCards'
@@ -165,6 +222,18 @@ const mutations = {
 		}
 		state.timelineCollapsed = result
 		saveKeys(TIMELINE_COLLAPSED_STORAGE_KEY, result)
+	},
+
+	/**
+	 * Sets or removes the follow-up reminder of a task
+	 *
+	 * @param {object} state The module state
+	 * @param {object} data Destructuring object
+	 * @param {object} data.task The task
+	 * @param {Date|moment|null} data.date The follow-up day (null: remove)
+	 */
+	tbSetFollowUp(state, { task, date }) {
+		writeFollowUpAlarm(task, date, tbt('Follow-up'))
 	},
 
 	/**
@@ -424,7 +493,7 @@ const actions = {
 	},
 
 	/**
-	 * Ends waiting: removes the waiting tag and a start date in the future, keeps the status
+	 * Ends waiting (see endWaiting), keeps the status
 	 *
 	 * @param {object} context The store context
 	 * @param {object} data Destructuring object
@@ -435,16 +504,7 @@ const actions = {
 		if (isTaskReadOnly(task)) {
 			return
 		}
-		let changed = false
-		if (hasWaitingTag(task)) {
-			context.commit('setTags', { task, tags: task.tags.filter(tag => !isWaitingTagName(tag)) })
-			changed = true
-		}
-		if (startsInFuture(task)) {
-			context.commit('setStart', { task, start: null })
-			changed = true
-		}
-		if (changed) {
+		if (endWaiting(context.commit, task)) {
 			await context.dispatch('updateTask', task)
 		}
 	},
@@ -462,10 +522,7 @@ const actions = {
 		if (isTaskReadOnly(task)) {
 			return
 		}
-		if (!hasWaitingTag(task)) {
-			context.commit('setTags', { task, tags: task.tags.concat([waitingTag()]) })
-		}
-		context.commit('setStart', { task, start: moment().add(days, 'days').startOf('day'), allDay: true })
+		startWaiting(context.commit, task, moment().add(days, 'days').startOf('day'))
 		await context.dispatch('updateTask', task)
 	},
 
@@ -597,11 +654,11 @@ const actions = {
 	 *
 	 * - open:       status NEEDS-ACTION, 0 %
 	 * - inProgress: status IN-PROCESS
-	 * - waiting:    waiting tag + start date (follow-up) = waitUntil
+	 * - waiting:    waiting tag + follow-up reminder on waitUntil
 	 * - done:       completed (subtasks are completed as well)
 	 * - cancelled:  cancelled (open subtasks are cancelled as well)
 	 *
-	 * Leaving the waiting column removes the tag and a start date in the future.
+	 * Leaving the waiting column ends waiting (see endWaiting).
 	 *
 	 * @param {object} context The store context
 	 * @param {object} data Destructuring object
@@ -618,12 +675,7 @@ const actions = {
 		let changed = false
 
 		const removeWaiting = () => {
-			if (hasWaitingTag(task)) {
-				commit('setTags', { task, tags: task.tags.filter(tag => !isWaitingTagName(tag)) })
-				changed = true
-			}
-			if (startsInFuture(task, now)) {
-				commit('setStart', { task, start: null })
+			if (endWaiting(commit, task, now)) {
 				changed = true
 			}
 		}
@@ -665,10 +717,7 @@ const actions = {
 				return
 			}
 			reopen()
-			if (!hasWaitingTag(task)) {
-				commit('setTags', { task, tags: task.tags.concat([waitingTag()]) })
-			}
-			commit('setStart', { task, start: moment(waitUntil).startOf('day'), allDay: true })
+			startWaiting(commit, task, waitUntil)
 			changed = true
 			await reopenParent()
 			break

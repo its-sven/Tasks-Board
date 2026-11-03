@@ -89,13 +89,26 @@ person and due date can be changed directly in the cell.
 									:show-name="true" />
 								<span v-else class="tb-table__empty">–</span>
 							</button>
-							<!-- Start / follow-up -->
-							<span v-else-if="column.key === 'start'"
-								class="tb-table__date"
-								:class="{ 'tb-table__date--waiting': isWaiting(task), 'tb-table__date--overdue': isFollowUp(task) && task.startMoment.isValid() }">
-								<TimerSandEmpty v-if="isWaiting(task)" :size="14" />
+							<!-- Start -->
+							<span v-else-if="column.key === 'start'" class="tb-table__date">
 								{{ formatDate(task.startMoment) }}
 							</span>
+							<!-- Follow-up: opens the dialog for a new date -->
+							<button v-else-if="column.key === 'followUp'"
+								type="button"
+								class="tb-table__cell-button"
+								:disabled="isReadOnly(task) || task.closed"
+								:aria-label="tbt('Follow-up') + ': ' + (followUpText(task) || '–')"
+								@click.stop="pendingWait = task">
+								<span v-if="followUpText(task)"
+									class="tb-table__date tb-table__date--waiting"
+									:class="{ 'tb-table__date--overdue': isFollowUp(task) }">
+									<BellAlertOutline v-if="isFollowUp(task)" :size="14" />
+									<TimerSandEmpty v-else :size="14" />
+									{{ followUpText(task) }}
+								</span>
+								<span v-else class="tb-table__empty">–</span>
+							</button>
 							<!-- Due -->
 							<button v-else-if="column.key === 'due'"
 								type="button"
@@ -204,7 +217,7 @@ import { isTaskReadOnly } from '../store/board.js'
 import { handleSelectClick } from '../store/selection.js'
 import { STATUS } from '../status.js'
 import { moveColumn, normalizeColumns, shownColumns, storableColumns, treeRows } from '../table.js'
-import { isFollowUpDue } from '../waiting.js'
+import { followUpDate, followUpState, isFollowUpDue } from '../waiting.js'
 import TbAvatar from './TbAvatar.vue'
 import TbTableMenu from './TbTableMenu.vue'
 import TbWaitDialog from './TbWaitDialog.vue'
@@ -213,6 +226,7 @@ import { showError } from '@nextcloud/dialogs'
 import moment from '@nextcloud/moment'
 
 import AccountOffOutline from 'vue-material-design-icons/AccountOffOutline.vue'
+import BellAlertOutline from 'vue-material-design-icons/BellAlertOutline.vue'
 import BellOutline from 'vue-material-design-icons/BellOutline.vue'
 import CalendarRemoveOutline from 'vue-material-design-icons/CalendarRemoveOutline.vue'
 import CalendarToday from 'vue-material-design-icons/CalendarToday.vue'
@@ -238,6 +252,7 @@ const PRIORITY_COLORS = { high: 'var(--tb-prio-high)', medium: 'var(--tb-prio-me
 export default {
 	name: 'TbTable',
 	components: {
+		BellAlertOutline,
 		BellOutline,
 		CheckboxMarkedOutline,
 		ChevronRight,
@@ -459,14 +474,25 @@ export default {
 		isReadOnly(task) {
 			return isTaskReadOnly(task)
 		},
-		isWaiting(task) {
-			return this.stateOf(task) === 'waiting'
-		},
 		isOverdue(task) {
 			return !task.closed && task.dueMoment.isValid() && task.dueMoment.isBefore(this.now, 'day')
 		},
 		isFollowUp(task) {
 			return isFollowUpDue(task, this.now)
+		},
+		/**
+		 * @param {object} task The task
+		 * @return {string} The follow-up date of a waiting task, '?' without a date, '' if it does not wait
+		 */
+		followUpText(task) {
+			if (task.closed) {
+				return ''
+			}
+			const state = followUpState(task, this.now)
+			if (!state) {
+				return ''
+			}
+			return state === 'noDate' ? '?' : this.formatDate(followUpDate(task, this.now))
 		},
 		visibleTags(task) {
 			return [...task.tags].sort((a, b) => a.localeCompare(b)).slice(0, 3)

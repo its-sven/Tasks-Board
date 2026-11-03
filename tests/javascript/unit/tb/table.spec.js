@@ -4,6 +4,7 @@ import { nextViewMode } from '../../../../src/tb/shortcuts.js'
 import { sort } from '../../../../src/tb/sort.js'
 import { link, makeCalendar, makeTask } from './helpers.js'
 
+import moment from '@nextcloud/moment'
 import { describe, expect, it } from 'vitest'
 
 describe('table - columns', () => {
@@ -15,10 +16,21 @@ describe('table - columns', () => {
 
 	it('keeps the stored order, adds new columns, the task stays first', () => {
 		const columns = normalizeColumns([{ key: 'due', visible: true }, { key: 'summary', visible: false }, { key: 'gone' }, { key: 'status', visible: false }])
-		expect(columns.slice(0, 3).map(column => column.key)).toEqual(['summary', 'due', 'status'])
+		const stored = columns.map(column => column.key).filter(key => ['summary', 'due', 'status'].includes(key))
+		expect(stored).toEqual(['summary', 'due', 'status'])
+		expect(columns[0].key).toBe('summary')
 		expect(columns[0].visible).toBe(true)
 		expect(columns.find(column => column.key === 'status').visible).toBe(false)
 		expect(columns).toHaveLength(TABLE_COLUMNS.length)
+	})
+
+	it('puts a new column next to the one it follows by default', () => {
+		// Stored before the follow-up column existed, in a changed order
+		const before = TABLE_COLUMNS.filter(column => column.key !== 'followUp').map(column => ({ key: column.key, visible: true }))
+		before.push(before.splice(3, 1)[0])
+		const keys = normalizeColumns(before).map(column => column.key)
+		expect(keys[keys.indexOf('due') + 1]).toBe('followUp')
+		expect(keys.at(-2)).toBe('due')
 	})
 
 	it('moves and hides columns', () => {
@@ -119,5 +131,16 @@ describe('table - tree', () => {
 		link(a1, main)
 		const rows = treeRows([main], { isExpanded: () => true, order: alpha })
 		expect(shape(rows)).toEqual(['Main v', '  A step v', '    A detail', '  B step', '  C done'])
+	})
+})
+
+describe('table - sorting by follow-up', () => {
+	it('puts the earliest follow-up first and tasks that do not wait last', () => {
+		const now = moment('2026-11-03T10:00:00')
+		const cal = makeCalendar('sf')
+		const late = makeTask(cal, { uid: 'late', tags: ['waiting'], followUp: moment('2026-11-20') })
+		const early = makeTask(cal, { uid: 'early', tags: ['waiting'], followUp: moment('2026-11-06') })
+		const none = makeTask(cal, { uid: 'none' })
+		expect(sort([none, late, early], 'followUp', false, now).map(task => task.uid)).toEqual(['early', 'late', 'none'])
 	})
 })

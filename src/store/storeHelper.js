@@ -32,7 +32,7 @@ import moment from '@nextcloud/moment'
 import ICAL from 'ical.js'
 import { isAssignedTo } from '../tb/assignee.js'
 import { isTemplateCalendar } from '../tb/templates.js'
-import { isFollowUpDue, isTaskWaiting } from '../tb/waiting.js'
+import { followUpState, hasWaitingTag, isFollowUpDue, isTaskWaiting } from '../tb/waiting.js'
 import { getCurrentUser } from '@nextcloud/auth'
 
 /**
@@ -134,6 +134,10 @@ function isTaskPriority(task) {
  * @return {boolean}
  */
 function isTaskCurrent(task) {
+	// Tasks Board: for a task with the waiting tag the follow-up date decides (the start date stays the plan)
+	if (hasWaitingTag(task)) {
+		return followUpState(task) !== 'pending'
+	}
 	return !task.startMoment.isValid() || task.startMoment.diff(moment(), 'days', true) < 0 || task.dueMoment.diff(moment(), 'days', true) < 0
 }
 

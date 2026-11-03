@@ -12,7 +12,7 @@
 
 import { assigneeOf } from './assignee.js'
 import { boardColumn, isWaitingTagName, priorityGroup } from './board.js'
-import { isFollowUpDue } from './waiting.js'
+import { followUpDate, followUpState, isFollowUpDue } from './waiting.js'
 
 import moment from '@nextcloud/moment'
 
@@ -24,6 +24,9 @@ export const NOBODY = '__nobody__'
 
 /** Main tasks that are left alone this long count as "lying around" */
 export const STALE_DAYS = 14
+
+/** "Next follow-ups" in the overview: follow-ups in this many days */
+export const NEXT_FOLLOW_UP_DAYS = 14
 
 /**
  * Work state of a task: done, cancelled, overdue (open and due before today),
@@ -296,17 +299,20 @@ export function breakdown(tasks, dimension, { now = moment(), limit = 8 } = {}) 
  *
  * @param {Array} tasks The tasks
  * @param {moment} now The current time
- * @return {{overdue: Array, followUps: Array, unassigned: Array, stale: Array}}
+ * @return {{overdue: Array, followUps: Array, nextFollowUps: Array, unassigned: Array, stale: Array}}
  */
 export function attention(tasks, now = moment()) {
 	const open = tasks.filter(task => !task.closed)
+	const nextUntil = now.clone().add(NEXT_FOLLOW_UP_DAYS, 'days')
 	const staleBefore = now.clone().subtract(STALE_DAYS, 'days')
 	const byPriority = (a, b) => (+a.priority || 10) - (+b.priority || 10) || a.summary.localeCompare(b.summary)
 	return {
 		overdue: open.filter(task => workState(task, now) === 'overdue')
 			.sort((a, b) => a.dueMoment.valueOf() - b.dueMoment.valueOf()),
 		followUps: open.filter(task => isFollowUpDue(task, now))
-			.sort((a, b) => (a.startMoment.isValid() ? a.startMoment.valueOf() : 0) - (b.startMoment.isValid() ? b.startMoment.valueOf() : 0)),
+			.sort((a, b) => (followUpDate(a, now)?.valueOf() ?? 0) - (followUpDate(b, now)?.valueOf() ?? 0)),
+		nextFollowUps: open.filter(task => followUpState(task, now) === 'pending' && !followUpDate(task, now).isAfter(nextUntil, 'day'))
+			.sort((a, b) => followUpDate(a, now).valueOf() - followUpDate(b, now).valueOf() || a.summary.localeCompare(b.summary)),
 		unassigned: open.filter(task => !assigneeOf(task) && workState(task, now) !== 'waiting')
 			.sort(byPriority),
 		stale: open.filter(task => priorityGroup(task) === 'high'

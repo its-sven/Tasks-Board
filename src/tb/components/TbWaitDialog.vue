@@ -29,14 +29,19 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 			</NcButton>
 		</div>
 		<p class="tb-wait-dialog__hint">
-			{{ tbt('The task gets the tag "{tag}" and stays out of "Current" until this date.', { tag: waitingTag }) }}
+			{{ tbt('The task gets the tag "{tag}" and a reminder on this day. Until then it stays out of "Current"; start and due date stay as they are.', { tag: waitingTag }) }}
+		</p>
+		<p v-if="oldStart" class="tb-wait-dialog__hint tb-wait-dialog__hint--old">
+			{{ tbt('So far the start date ({date}) was the follow-up date. The reminder takes its place, the start date is removed.', { date: oldStart }) }}
 		</p>
 	</NcDialog>
 </template>
 
 <script>
 import { waitingTag } from '../board.js'
+import { shortDate } from '../dates.js'
 import { tbt } from '../l10n.js'
+import { followUpDate, hasFollowUpAlarm, hasWaitingTag } from '../waiting.js'
 
 import moment from '@nextcloud/moment'
 import NcButton from '@nextcloud/vue/components/NcButton'
@@ -58,8 +63,8 @@ export default {
 	},
 	emits: ['confirm', 'cancel'],
 	data() {
-		const start = this.task.startMoment
-		const initial = start.isValid() && start.isAfter(moment(), 'day') ? start : moment().add(7, 'days')
+		const current = followUpDate(this.task)
+		const initial = current && current.isAfter(moment(), 'day') ? current : moment().add(7, 'days')
 		return {
 			date: initial.clone().startOf('day').toDate(),
 			done: false,
@@ -68,6 +73,16 @@ export default {
 	computed: {
 		waitingTag() {
 			return waitingTag()
+		},
+		/**
+		 * The start date of a task that waits by the old rule (waiting tag, no
+		 * reminder): it was the follow-up date and is replaced
+		 *
+		 * @return {string}
+		 */
+		oldStart() {
+			const task = this.task
+			return hasWaitingTag(task) && !hasFollowUpAlarm(task) && task.startMoment.isValid() ? shortDate(task.startMoment, true) : ''
 		},
 		tomorrow() {
 			return moment().add(1, 'day').startOf('day').toDate()

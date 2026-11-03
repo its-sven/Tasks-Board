@@ -129,7 +129,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 <script>
 import TaskCheckbox from '../../components/TaskCheckbox.vue'
-import { followUpState, isWaitingTagName, parentTask, priorityGroup } from '../board.js'
+import { followUpDate, followUpState, isWaitingTagName, parentTask, priorityGroup } from '../board.js'
 import { shortDate } from '../dates.js'
 import { openPathKeys } from '../fold.js'
 import { tbt } from '../l10n.js'
@@ -226,7 +226,7 @@ export default {
 				return null
 			}
 			const state = followUpState(this.task)
-			const date = shortDate(this.task.startMoment)
+			const date = shortDate(followUpDate(this.task))
 			switch (state) {
 			case 'pending':
 				return { short: tbt('Follow-up {date}', { date }), text: tbt('Follow-up {date}', { date }), alert: false }

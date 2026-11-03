@@ -1,5 +1,6 @@
 import { isTaskInList } from '../../../../src/store/storeHelper.js'
-import { boardColumn, defaultWaitingTag, followUpState, hasWaitingTag, isFollowUpDue, isTaskWaiting, normalizeWaitingTag, setFutureStartWaits, setWaitingTag, waitingTag } from '../../../../src/tb/waiting.js'
+import { mapICALAlarmsToAlarmObjects } from '../../../../src/models/alarm.js'
+import { boardColumn, defaultWaitingTag, followUpDate, followUpState, hasFollowUpAlarm, hasWaitingTag, isFollowUpAlarm, isFollowUpDue, isTaskWaiting, normalizeWaitingTag, setFutureStartWaits, setWaitingTag, waitingTag, writeFollowUpAlarm } from '../../../../src/tb/waiting.js'
 import { setWaiting } from '../../../../src/tb/progress.js'
 import { makeCalendar, makeTask } from './helpers.js'
 
@@ -43,7 +44,8 @@ describe('waiting - collections', () => {
 		const task = makeTask(calendar, { uid: 'new', tags: ['Netzwerk'] })
 		setWaiting(task, 7)
 		expect(task.tags).toEqual(['Netzwerk', 'waiting'])
-		expect(task.startMoment.format('YYYY-MM-DD')).toBe(moment().add(7, 'days').format('YYYY-MM-DD'))
+		expect(followUpDate(task).format('YYYY-MM-DD')).toBe(moment().add(7, 'days').format('YYYY-MM-DD'))
+		expect(task.startMoment.isValid()).toBe(false)
 		expect(isTaskWaiting(task)).toBe(true)
 		setWaiting(task, 0)
 		expect(task.tags).toEqual(['Netzwerk', 'waiting'])
@@ -104,5 +106,66 @@ describe('waiting - start date in the future', () => {
 		} finally {
 			setFutureStartWaits(true)
 		}
+	})
+})
+
+describe('waiting - follow-up reminder', () => {
+	const now = moment('2026-11-03T10:00:00')
+
+	it('takes the follow-up date from the reminder, start and due stay the plan', () => {
+		const cal = makeCalendar('fu1')
+		const task = makeTask(cal, { uid: 'plan', tags: ['waiting'], start: moment('2026-11-01'), due: moment('2026-11-30'), followUp: moment('2026-11-17') })
+		expect(hasFollowUpAlarm(task)).toBe(true)
+		expect(followUpDate(task, now).format('YYYY-MM-DD')).toBe('2026-11-17')
+		expect(followUpState(task, now)).toBe('pending')
+		expect(followUpState(task, moment('2026-11-17T09:00:00'))).toBe('reached')
+		expect(isFollowUpDue(task, moment('2026-11-18T09:00:00'))).toBe(true)
+		// The planned start in the future does not delay a reached follow-up
+		const later = makeTask(cal, { uid: 'later', tags: ['waiting'], start: moment('2026-11-20'), followUp: moment('2026-11-02') })
+		expect(followUpState(later, now)).toBe('reached')
+	})
+
+	it('without the reminder the start date counts as before', () => {
+		const cal = makeCalendar('fu2')
+		const old = makeTask(cal, { uid: 'old', tags: ['waiting'], start: moment('2026-11-10') })
+		expect(hasFollowUpAlarm(old)).toBe(false)
+		expect(followUpDate(old, now).format('YYYY-MM-DD')).toBe('2026-11-10')
+		expect(followUpState(old, now)).toBe('pending')
+		const other = makeTask(cal, { uid: 'other', tags: ['waiting'], alarms: ['TRIGGER;VALUE=DATE-TIME:20261105T070000Z'] })
+		expect(followUpDate(other, now)).toBeNull()
+		expect(followUpState(other, now)).toBe('noDate')
+	})
+
+	it('writes one marked reminder at 8 o\'clock and keeps the other reminders', () => {
+		const cal = makeCalendar('fu3')
+		const task = makeTask(cal, { uid: 'w', alarms: ['TRIGGER:-PT15M'], followUp: moment('2026-11-10') })
+		writeFollowUpAlarm(task, moment('2026-11-24'), 'Follow-up')
+		expect(task.alarms).toHaveLength(2)
+		expect(task.alarms.filter(isFollowUpAlarm)).toHaveLength(1)
+		expect(followUpDate(task, now).format('YYYY-MM-DD')).toBe('2026-11-24')
+		const ics = task.vCalendar.toString()
+		expect(ics).toContain('X-TASKS-BOARD-FOLLOW-UP:1')
+		expect(ics).toContain('TRIGGER;VALUE=DATE-TIME:' + moment('2026-11-24T08:00:00').utc().format('YYYYMMDD[T]HHmmss[Z]'))
+		expect(ics).toContain('TRIGGER:-PT15M')
+		writeFollowUpAlarm(task, null)
+		expect(task.alarms).toHaveLength(1)
+		expect(hasFollowUpAlarm(task)).toBe(false)
+	})
+
+	it('marks the reminder in the sidebar list', () => {
+		const cal = makeCalendar('fu4')
+		const task = makeTask(cal, { uid: 's', alarms: ['TRIGGER:-PT15M'], followUp: moment('2026-11-10') })
+		const objects = mapICALAlarmsToAlarmObjects(task.alarms)
+		expect(objects.map(alarm => isFollowUpAlarm(alarm.alarmComponent))).toEqual([false, true])
+	})
+
+	it('"Current" leaves out a waiting task until its follow-up date', () => {
+		const cal = makeCalendar('fu5')
+		const pending = makeTask(cal, { uid: 'cp', tags: ['waiting'], start: moment().subtract(5, 'days'), followUp: moment().add(3, 'days') })
+		const reached = makeTask(cal, { uid: 'cr', tags: ['waiting'], start: moment().add(5, 'days'), followUp: moment().subtract(1, 'days') })
+		const planned = makeTask(cal, { uid: 'cf', start: moment().add(5, 'days') })
+		expect(isTaskInList(pending, 'current')).toBe(false)
+		expect(isTaskInList(reached, 'current')).toBe(true)
+		expect(isTaskInList(planned, 'current')).toBe(false)
 	})
 })

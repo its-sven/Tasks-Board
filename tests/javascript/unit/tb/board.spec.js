@@ -14,6 +14,7 @@ import {
 import tbBoard from '../../../../src/tb/store/board.js'
 import tasksModule from '../../../../src/store/tasks.js'
 import { setActiveTemplateId } from '../../../../src/tb/templates.js'
+import { followUpDate, hasFollowUpAlarm, setFutureStartWaits } from '../../../../src/tb/waiting.js'
 
 import moment from '@nextcloud/moment'
 
@@ -164,24 +165,69 @@ describe('board - moving cards', () => {
 		const dispatched = []
 		return {
 			dispatched,
-			commit: (name, payload) => tasksModule.mutations[name]({}, payload),
+			commit: (name, payload) => (tasksModule.mutations[name] || tbBoard.mutations[name])({}, payload),
 			dispatch: async (name, payload) => { dispatched.push(name) },
 			getters: { getParentTask: () => null },
 		}
 	}
 	const move = tbBoard.actions.moveTaskToBoardColumn
 
-	it('moves to waiting with tag and date', async () => {
+	it('moves to waiting with tag and follow-up reminder', async () => {
 		const calendar = makeCalendar('m1')
 		const task = makeTask(calendar, { uid: 'mw', status: 'IN-PROCESS', percent: 20, tags: ['Netzwerk'] })
 		const ctx = context()
 		const date = moment().add(14, 'days')
 		await move(ctx, { task, column: 'waiting', waitUntil: date.toDate() })
 		expect(task.tags).toEqual(['Netzwerk', 'waiting'])
-		expect(task.startMoment.format('YYYY-MM-DD')).toBe(date.format('YYYY-MM-DD'))
-		expect(task.allDay).toBe(true)
+		expect(followUpDate(task).format('YYYY-MM-DD')).toBe(date.format('YYYY-MM-DD'))
+		expect(hasFollowUpAlarm(task)).toBe(true)
+		expect(task.startMoment.isValid()).toBe(false)
 		expect(task.status).toBe('IN-PROCESS')
 		expect(ctx.dispatched).toEqual(['updateTask'])
+	})
+
+	it('keeps the planned dates when a task waits and when it goes on', async () => {
+		const calendar = makeCalendar('m1b')
+		const start = moment().subtract(3, 'days')
+		const due = moment().add(20, 'days')
+		const task = makeTask(calendar, { uid: 'mpl', start, due })
+		await move(context(), { task, column: 'waiting', waitUntil: moment().add(7, 'days').toDate() })
+		expect(task.startMoment.format('YYYY-MM-DD')).toBe(start.format('YYYY-MM-DD'))
+		expect(task.dueMoment.format('YYYY-MM-DD')).toBe(due.format('YYYY-MM-DD'))
+		expect(followUpState(task)).toBe('pending')
+		await move(context(), { task, column: 'inProgress' })
+		expect(task.tags).toEqual([])
+		expect(hasFollowUpAlarm(task)).toBe(false)
+		expect(task.startMoment.format('YYYY-MM-DD')).toBe(start.format('YYYY-MM-DD'))
+		expect(task.dueMoment.format('YYYY-MM-DD')).toBe(due.format('YYYY-MM-DD'))
+	})
+
+	it('a planned start in the future stays when it does not make the task wait', async () => {
+		const calendar = makeCalendar('m1c')
+		const start = moment().add(10, 'days')
+		const task = makeTask(calendar, { uid: 'mfs', start, status: 'IN-PROCESS' })
+		setFutureStartWaits(false)
+		try {
+			await move(context(), { task, column: 'open' })
+			expect(task.startMoment.format('YYYY-MM-DD')).toBe(start.format('YYYY-MM-DD'))
+		} finally {
+			setFutureStartWaits(true)
+		}
+		// Switched on it waits for its start: going on starts it today
+		await move(context(), { task, column: 'inProgress' })
+		expect(task.startMoment.format('YYYY-MM-DD')).toBe(moment().format('YYYY-MM-DD'))
+	})
+
+	it('an old waiting task gets its follow-up date as reminder instead of the start date', async () => {
+		const calendar = makeCalendar('m1d')
+		const old = moment().subtract(2, 'days')
+		const task = makeTask(calendar, { uid: 'mold', tags: ['waiting'], start: old })
+		expect(followUpDate(task).format('YYYY-MM-DD')).toBe(old.format('YYYY-MM-DD'))
+		const date = moment().add(7, 'days')
+		await move(context(), { task, column: 'waiting', waitUntil: date.toDate() })
+		expect(task.startMoment.isValid()).toBe(false)
+		expect(followUpDate(task).format('YYYY-MM-DD')).toBe(date.format('YYYY-MM-DD'))
+		expect(task.tags).toEqual(['waiting'])
 	})
 
 	it('leaving waiting removes tag and future date', async () => {

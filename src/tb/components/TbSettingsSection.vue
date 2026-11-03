@@ -146,7 +146,7 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 			{{ tbt('Waiting tag') }}
 		</h3>
 		<p class="tb-settings__hint tb-settings__hint--flat">
-			{{ tbt('Tasks with this tag are waiting: they appear under "Waiting" and in the board column "Waiting". The start date is the follow-up date.') }}
+			{{ tbt('Tasks with this tag are waiting: they appear under "Waiting" and in the board column "Waiting". The follow-up date is a reminder in the task; without it the start date counts, as before.') }}
 		</p>
 		<div v-if="canEditTags" class="tb-settings__waiting">
 			<input v-model="waitingTagInput"

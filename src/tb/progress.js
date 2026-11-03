@@ -8,10 +8,10 @@
  */
 
 import { assigneeOf, writeAssignee } from './assignee.js'
-import { isWaitingTagName, waitingTag } from './waiting.js'
+import { tbt } from './l10n.js'
+import { isWaitingTagName, waitingTag, writeFollowUpAlarm } from './waiting.js'
 
 import moment from '@nextcloud/moment'
-import ICAL from 'ical.js'
 
 /** Default preferences (stored per user as JSON in "tbPrefs") */
 export const DEFAULT_PREFS = Object.freeze({
@@ -126,7 +126,7 @@ export function applyNewTaskDefaults(task, parent, prefs) {
 }
 
 /**
- * Marks a new task as waiting with a follow-up date
+ * Marks a new task as waiting with a follow-up reminder
  *
  * @param {object} task The task
  * @param {number} days Follow-up in that many days (0 = today)
@@ -135,7 +135,7 @@ export function setWaiting(task, days) {
 	if (!task.tags.some(isWaitingTagName)) {
 		task.tags = [...task.tags, waitingTag()]
 	}
-	task.start = ICAL.Time.fromDateString(moment().add(days, 'days').format('YYYY-MM-DD'))
+	writeFollowUpAlarm(task, moment().add(days, 'days'), tbt('Follow-up'))
 }
 
 /**

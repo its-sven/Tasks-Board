@@ -155,3 +155,17 @@ describe('stats - attention and history', () => {
 		expect([0, 3, 6, 11, 23, 48, 130].map(niceMax)).toEqual([5, 5, 10, 20, 25, 50, 200])
 	})
 })
+
+describe('stats - next follow-ups', () => {
+	it('lists waiting tasks whose follow-up comes in the next days, earliest first', () => {
+		const now = moment('2026-11-03T10:00:00')
+		const cal = makeCalendar('nf')
+		const soon = makeTask(cal, { uid: 'soon', tags: ['waiting'], followUp: moment('2026-11-05'), due: moment('2026-11-04') })
+		const sooner = makeTask(cal, { uid: 'sooner', tags: ['waiting'], followUp: moment('2026-11-04') })
+		const later = makeTask(cal, { uid: 'later', tags: ['waiting'], followUp: moment('2026-12-20') })
+		const reached = makeTask(cal, { uid: 'reached', tags: ['waiting'], followUp: moment('2026-11-01') })
+		const lists = attention([soon, sooner, later, reached], now)
+		expect(lists.nextFollowUps.map(task => task.uid)).toEqual(['sooner', 'soon'])
+		expect(lists.followUps.map(task => task.uid)).toEqual(['reached'])
+	})
+})

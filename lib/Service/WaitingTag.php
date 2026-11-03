@@ -10,7 +10,7 @@ use OCA\TasksBoard\AppInfo\Application;
 use OCP\IConfig;
 
 /**
- * The tag that marks a task as waiting (the follow-up date is the start date).
+ * The tag that marks a task as waiting (the follow-up date is a marked reminder in the task).
  * Administrators can change it; without a setting it depends on the default
  * language of the instance ("wartet" for German, "waiting" otherwise).
  */

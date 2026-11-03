@@ -235,13 +235,14 @@ everything below them. A click on a task opens it in the sidebar.
 <script>
 import { assigneeOf } from '../assignee.js'
 import { shortDate } from '../dates.js'
-import { isWaitingTagName, priorityGroup } from '../board.js'
+import { followUpDate, isWaitingTagName, priorityGroup } from '../board.js'
 import { tbt } from '../l10n.js'
 import {
 	attention,
 	breakdown,
 	dashboardTasks,
 	filterTasks,
+	NEXT_FOLLOW_UP_DAYS,
 	NOBODY,
 	projectOptions,
 	STALE_DAYS,
@@ -263,6 +264,7 @@ import NcSelect from '@nextcloud/vue/components/NcSelect'
 import AccountQuestionOutline from 'vue-material-design-icons/AccountQuestionOutline.vue'
 import AlertCircleOutline from 'vue-material-design-icons/AlertCircleOutline.vue'
 import BellAlertOutline from 'vue-material-design-icons/BellAlertOutline.vue'
+import BellOutline from 'vue-material-design-icons/BellOutline.vue'
 import ChartBar from 'vue-material-design-icons/ChartBar.vue'
 import CheckCircleOutline from 'vue-material-design-icons/CheckCircleOutline.vue'
 import FilterRemoveOutline from 'vue-material-design-icons/FilterRemoveOutline.vue'
@@ -417,7 +419,8 @@ export default {
 			const person = (task) => assigneeOf(task)?.displayName || ''
 			return [
 				{ key: 'overdue', title: this.stateLabel('overdue'), icon: AlertCircleOutline, tasks: lists.overdue, hint: tbt('Open and due before today'), meta: task => [person(task), tbt('due {date}', { date: date(task.dueMoment) })].filter(Boolean).join(' · ') },
-				{ key: 'followups', title: tbt('Follow-up due'), icon: BellAlertOutline, tasks: lists.followUps, hint: tbt('Waiting, the follow-up date is reached'), meta: task => [person(task), date(task.startMoment)].filter(Boolean).join(' · ') },
+				{ key: 'followups', title: tbt('Follow-up due'), icon: BellAlertOutline, tasks: lists.followUps, hint: tbt('Waiting, the follow-up date is reached'), meta: task => [person(task), date(followUpDate(task, this.now))].filter(Boolean).join(' · ') },
+				{ key: 'nextFollowUps', title: tbt('Next follow-ups'), icon: BellOutline, tasks: lists.nextFollowUps, hint: tbt('Waiting, follow-up in the next {days} days', { days: NEXT_FOLLOW_UP_DAYS }), meta: task => [person(task), date(followUpDate(task, this.now))].filter(Boolean).join(' · ') },
 				{ key: 'unassigned', title: tbt('Not assigned'), icon: AccountQuestionOutline, tasks: lists.unassigned, hint: tbt('Open, nobody responsible'), meta: task => this.priorityLabel(priorityGroup(task)) },
 				{ key: 'stale', title: tbt('Lying around'), icon: SleepIcon, tasks: lists.stale, hint: tbt('Important (1–4), unchanged for {days} days', { days: STALE_DAYS }), meta: task => [person(task), tbt('changed {date}', { date: date(task.modifiedMoment) })].filter(Boolean).join(' · ') },
 			]

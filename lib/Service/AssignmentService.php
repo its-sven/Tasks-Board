@@ -13,6 +13,7 @@ use OCP\IGroupManager;
 use OCP\IUserManager;
 use OCP\Notification\IManager as INotificationManager;
 use Sabre\VObject\Component;
+use Sabre\VObject\Property\ICalendar\DateTime;
 use Sabre\VObject\Reader;
 
 /**
@@ -317,7 +318,8 @@ class AssignmentService {
 	/**
 	 * Reminders for today (hourly job):
 	 *
-	 * - followup: tasks with the waiting tag whose start date (follow-up date) is today
+	 * - followup: tasks with the waiting tag whose follow-up date is today (the
+	 *             follow-up reminder, without it the start date as before 1.4.0)
 	 * - due:      open tasks whose due date is today
 	 *
 	 * The notification goes to the assigned person, otherwise to the owner of the
@@ -390,8 +392,9 @@ class AssignmentService {
 			$taskUid = (string)$vtodo->UID;
 
 			$reminders = [];
-			if (isset($vtodo->DTSTART) && $this->hasTag($vtodo, $waitingTag)) {
-				$reminders[] = ['followup', $calendar['id'] . ':' . $taskUid, $this->localDate($vtodo->DTSTART, $zone), 'notifyFollowUp'];
+			$followUp = $this->followUpProperty($vtodo);
+			if ($followUp !== null && $this->hasTag($vtodo, $waitingTag)) {
+				$reminders[] = ['followup', $calendar['id'] . ':' . $taskUid, $this->localDate($followUp, $zone), 'notifyFollowUp'];
 			}
 			if (isset($vtodo->DUE)) {
 				$reminders[] = ['due', 'due:' . $calendar['id'] . ':' . $taskUid, $this->localDate($vtodo->DUE, $zone), 'notifyDue'];
@@ -428,9 +431,25 @@ class AssignmentService {
 	}
 
 	/**
+	 * The follow-up date of a task: the trigger of the reminder marked with
+	 * X-TASKS-BOARD-FOLLOW-UP, otherwise the start date (rule before 1.4.0)
+	 *
+	 * @param Component $vtodo The task
+	 * @return DateTime|null
+	 */
+	private function followUpProperty(Component $vtodo): ?DateTime {
+		foreach ($vtodo->select('VALARM') as $alarm) {
+			if ($alarm instanceof Component && isset($alarm->{'X-TASKS-BOARD-FOLLOW-UP'}) && $alarm->TRIGGER instanceof DateTime) {
+				return $alarm->TRIGGER;
+			}
+		}
+		return $vtodo->DTSTART instanceof DateTime ? $vtodo->DTSTART : null;
+	}
+
+	/**
 	 * Date (Y-m-d) of a date property in a time zone (all-day dates stay as they are)
 	 *
-	 * @param \Sabre\VObject\Property\ICalendar\DateTime $property DTSTART or DUE
+	 * @param DateTime $property DTSTART, DUE or the trigger of a reminder
 	 * @param \DateTimeZone $zone The time zone
 	 * @return string
 	 */
