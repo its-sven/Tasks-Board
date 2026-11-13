@@ -31,6 +31,7 @@ import moment from '@nextcloud/moment'
 
 import ICAL from 'ical.js'
 import { isAssignedTo } from '../tb/assignee.js'
+import { isListHidden } from '../tb/hidden.js'
 import { isTemplateCalendar } from '../tb/templates.js'
 import { followUpState, hasWaitingTag, isFollowUpDue, isTaskWaiting } from '../tb/waiting.js'
 import { getCurrentUser } from '@nextcloud/auth'
@@ -60,8 +61,8 @@ function isTaskInList(task, listId, checkSubtasks = true) {
 	const parts = listId.split('-')
 	listId = parts[0]
 	const day = parts[1] ? parts[1] : null
-	// Tasks Board: tasks of the template list are only shown in the list itself
-	if (COLLECTION_IDS.includes(listId) && isTemplateCalendar(task.calendar)) {
+	// Tasks Board: tasks of the template list and of hidden lists are only shown in the list itself
+	if (COLLECTION_IDS.includes(listId) && (isTemplateCalendar(task.calendar) || isListHidden(task.calendar))) {
 		return false
 	}
 	switch (listId) {

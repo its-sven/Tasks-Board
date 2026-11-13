@@ -8,6 +8,7 @@ import client from '../../services/cdav.js'
 import Requests from '../../services/requests.js'
 import { Calendar } from '../../store/calendars.js'
 import { waitingTag, isWaitingTagName, hasWaitingTag, startsInFuture, parseViews, patchViews, viewFor } from '../board.js'
+import { hiddenListsAfter, isListHidden, setHiddenLists } from '../hidden.js'
 import { tbt } from '../l10n.js'
 import { shiftedDates } from '../timeline.js'
 import { hasFollowUpAlarm, setFutureStartWaits, waitsForStart, writeFollowUpAlarm } from '../waiting.js'
@@ -369,7 +370,8 @@ const getters = {
 		const chosen = route.params.calendarId ? state.targetOverrides[key] : getters.tbViews[key]?.targetCalendarId
 		if (chosen) {
 			const calendar = rootGetters.getCalendarById(chosen)
-			if (calendar && !calendar.readOnly) {
+			// In collections a hidden list is no target
+			if (calendar && !calendar.readOnly && (route.params.calendarId || !isListHidden(calendar))) {
 				return calendar
 			}
 		}
@@ -401,6 +403,11 @@ export function tbUiPlugin(store) {
 		setFutureStartWaits,
 		{ immediate: true },
 	)
+	store.watch(
+		() => store.getters.tbPrefs.hiddenLists,
+		setHiddenLists,
+		{ immediate: true },
+	)
 }
 
 const actions = {
@@ -414,6 +421,44 @@ const actions = {
 	 */
 	setTbShowClosed({ dispatch }, show) {
 		return dispatch('setSetting', { type: 'showHidden', value: show ? 1 : 0 })
+	},
+
+	/**
+	 * Gives a task without dates its dates (drawn on the timeline), all-day
+	 *
+	 * @param {object} context The store context
+	 * @param {object} data Destructuring object
+	 * @param {object} data.task The task
+	 * @param {moment|null} data.start The start (null: none)
+	 * @param {moment} data.due The due date
+	 * @return {Promise}
+	 */
+	async tbSetDates(context, { task, start, due }) {
+		if (isTaskReadOnly(task) || task.isRecurring) {
+			return
+		}
+		context.commit('setDue', { task, due, allDay: true })
+		if (start) {
+			context.commit('setStart', { task, start, allDay: true })
+		}
+		await context.dispatch('updateTask', task)
+	},
+
+	/**
+	 * Sets the follow-up date of a task (moved on the timeline); the task waits
+	 *
+	 * @param {object} context The store context
+	 * @param {object} data Destructuring object
+	 * @param {object} data.task The task
+	 * @param {moment} data.date The follow-up day
+	 * @return {Promise}
+	 */
+	async tbSetFollowUpDate(context, { task, date }) {
+		if (isTaskReadOnly(task)) {
+			return
+		}
+		startWaiting(context.commit, task, date)
+		await context.dispatch('updateTask', task)
 	},
 
 	/**
@@ -641,6 +686,33 @@ const actions = {
 	 */
 	setTbNavigationOrder(context, order) {
 		return context.dispatch('setTbPrefs', { collectionOrder: order })
+	},
+
+	/**
+	 * Hides a list or shows it again (see hidden.js)
+	 *
+	 * @param {object} context The store context
+	 * @param {object} data Destructuring object
+	 * @param {object} data.calendar The list
+	 * @param {boolean} data.hide Hide (true) or show (false)
+	 * @return {Promise}
+	 */
+	setTbListHidden(context, { calendar, hide }) {
+		return context.dispatch('setTbPrefs', { hiddenLists: hiddenListsAfter(context.getters.tbPrefs.hiddenLists, calendar.id, hide) })
+	},
+
+	/**
+	 * Loads the preferences where they are not in the page (dashboard widget)
+	 *
+	 * @param {object} context The store context
+	 * @return {Promise}
+	 */
+	async tbLoadPrefs(context) {
+		const response = await Requests.get(generateUrl('apps/' + appName + '/api/v1/settings'))
+		const prefs = response?.data?.data?.tbPrefs
+		if (prefs !== undefined) {
+			context.commit('setSetting', { type: 'tbPrefs', value: parsePrefs(prefs) })
+		}
 	},
 
 	async setTbPrefs(context, patch) {

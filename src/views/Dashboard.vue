@@ -71,6 +71,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 import TaskCreateDialog from '../components/TaskCreateDialog.vue'
 import client from '../services/cdav.js'
 import { sort, isTaskInList } from '../store/storeHelper.js'
+import { isListHidden } from '../tb/hidden.js'
 
 import { translate as t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
@@ -116,7 +117,8 @@ export default {
 			return this.filteredTasks.some(task => isTaskInList(task, 'today'))
 		},
 		filteredTasks() {
-			return sort(this.tasks.filter(task => !task.closed))
+			// Tasks Board: not from hidden lists
+			return sort(this.tasks.filter(task => !task.closed && !isListHidden(task.calendar)))
 		},
 	},
 	mounted() {
@@ -130,6 +132,8 @@ export default {
 		]),
 
 		async initializeEnvironment() {
+			// Tasks Board: preferences, so hidden lists stay hidden here as well
+			await this.$store.dispatch('tbLoadPrefs').catch(error => console.error(error))
 			await client.connect({ enableCalDAV: true })
 			await this.$store.dispatch('fetchCurrentUserPrincipal')
 			let { calendars } = await this.$store.dispatch('getCalendarsAndTrashBin')

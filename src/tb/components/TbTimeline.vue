@@ -5,8 +5,10 @@ SPDX-License-Identifier: AGPL-3.0-or-later
 
 <!--
 Timeline view: main tasks (projects) and their subtasks as bars from the start
-to the due date. Left the tree of tasks, right the days. Drag a bar to move it
-(a main task takes its subtasks along), drag its ends to change start or due.
+to the due date. Left the tree of tasks with optional columns, right the days.
+Drag a bar to move it (a main task takes its subtasks along), drag its ends to
+change start or due, draw a span on the row of a task without dates, drag the
+bell to move the follow-up. Rows can be grouped by list or person.
 On phones the timeline is only shown, not changed.
 -->
 <template>
@@ -20,19 +22,30 @@ On phones the timeline is only shown, not changed.
 		<div v-else
 			ref="scroller"
 			class="tb-timeline"
-			:class="{ 'tb-timeline--dragging': !!drag }"
+			:class="{ 'tb-timeline--dragging': !!(drag || draw || bell) }"
 			:style="{ maxHeight, '--tb-day': dayWidth + 'px', '--tb-left': leftWidth + 'px' }">
 			<div class="tb-timeline__grid" :style="{ width: (leftWidth + timelineWidth) + 'px' }">
 				<!-- Head: label and today button, months, days or weeks -->
 				<div class="tb-timeline__head">
 					<div class="tb-timeline__corner">
-						<span class="tb-timeline__corner-label">{{ tbt('Task') }}</span>
-						<NcButton variant="tertiary"
-							size="small"
-							class="tb-timeline__today"
-							@click="scrollToToday(true)">
-							{{ tbt('Today') }}
-						</NcButton>
+						<div class="tb-timeline__corner-top">
+							<span class="tb-timeline__corner-label">{{ tbt('Task') }}</span>
+							<NcButton variant="tertiary"
+								size="small"
+								class="tb-timeline__today"
+								@click="scrollToToday(true)">
+								{{ tbt('Today') }}
+							</NcButton>
+						</div>
+						<div v-if="columns.length" class="tb-timeline__corner-columns">
+							<span v-for="column in columns"
+								:key="column.key"
+								class="tb-timeline__cell tb-timeline__cell--head"
+								:class="'tb-timeline__cell--' + column.key"
+								:style="{ width: column.width + 'px' }">
+								{{ tbt(column.label) }}
+							</span>
+						</div>
 					</div>
 					<div class="tb-timeline__scale" :style="{ width: timelineWidth + 'px' }">
 						<div class="tb-timeline__months">
@@ -65,79 +78,123 @@ On phones the timeline is only shown, not changed.
 						<span class="tb-timeline__now" :style="{ left: todayLeft + 'px' }" />
 					</div>
 
-					<div v-for="row in rows"
-						:key="row.task.key"
-						class="tb-timeline__row"
-						:class="{ 'tb-timeline__row--active': row.task.uri === $route.params.taskId, 'tb-timeline__row--root': row.depth === 0 }"
-						:data-task-key="row.task.key">
-						<div class="tb-timeline__label" :style="{ paddingInlineStart: (8 + row.depth * 18) + 'px' }">
-							<button v-if="row.hasChildren"
-								type="button"
-								class="tb-timeline__expand no-nav"
-								:class="{ 'tb-timeline__expand--open': row.expanded }"
-								:disabled="filtering"
-								:aria-expanded="row.expanded ? 'true' : 'false'"
-								:aria-label="row.expanded ? tbt('Hide subtasks') : tbt('Show subtasks')"
-								:title="row.expanded ? tbt('Hide subtasks') : tbt('Show subtasks')"
-								@click.stop="toggleRow(row.task)">
-								<ChevronRight :size="18" />
-							</button>
-							<span v-else class="tb-timeline__expand-space" />
-							<span class="tb-timeline__dot" :style="{ backgroundColor: row.color }" />
-							<span class="tb-timeline__title"
-								:class="{ 'tb-timeline__title--closed': row.task.closed }"
-								:title="row.task.summary"
-								@click="openTask(row.task)">
-								{{ row.task.summary }}
-							</span>
-							<TimerSandEmpty v-if="row.waiting"
-								:size="14"
-								class="tb-timeline__waiting-icon"
-								:title="tbt('Waiting')" />
-							<span v-if="row.task.complete > 0" class="tb-timeline__percent">{{ row.task.complete }} %</span>
-							<TbAvatar v-if="row.assignee" :person="row.assignee" :size="20" />
-						</div>
-						<div class="tb-timeline__lane" :style="{ width: timelineWidth + 'px' }">
-							<div v-if="row.span"
-								class="tb-timeline__bar"
-								:class="{
-									'tb-timeline__bar--milestone': row.span.milestone,
-									'tb-timeline__bar--derived': row.span.derived,
-									'tb-timeline__bar--outside': row.outside,
-									'tb-timeline__bar--cut-start': cut(row).cutStart,
-									'tb-timeline__bar--cut-end': cut(row).cutEnd,
-									'tb-timeline__bar--closed': row.task.closed,
-									'tb-timeline__bar--waiting': row.waiting,
-									'tb-timeline__bar--editable': row.editable,
-									'tb-timeline__bar--dragged': drag && drag.keys.has(row.task.key),
-								}"
-								:style="barStyle(row)"
-								:title="barTitle(row)"
-								@pointerdown="startDrag(row, 'move', $event)">
-								<template v-if="!row.span.milestone">
-									<span class="tb-timeline__fill" :style="{ width: row.task.complete + '%' }" />
-									<span v-if="row.editable && !row.span.derived"
-										class="tb-timeline__handle tb-timeline__handle--start"
-										@pointerdown.stop="startDrag(row, 'start', $event)" />
-									<span v-if="row.editable && !row.span.derived"
-										class="tb-timeline__handle tb-timeline__handle--end"
-										@pointerdown.stop="startDrag(row, 'end', $event)" />
-								</template>
-								<AlertCircleOutline v-if="row.outside" :size="14" class="tb-timeline__warn" />
+					<template v-for="row in rows" :key="row.key">
+						<!-- Group (list or person) -->
+						<div v-if="row.group"
+							class="tb-timeline__group"
+							:data-group-key="row.key">
+							<div class="tb-timeline__label">
+								<button type="button"
+									class="tb-timeline__expand no-nav"
+									:class="{ 'tb-timeline__expand--open': row.expanded }"
+									:aria-expanded="row.expanded ? 'true' : 'false'"
+									:aria-label="row.expanded ? tbt('Hide tasks') : tbt('Show tasks')"
+									:title="row.expanded ? tbt('Hide tasks') : tbt('Show tasks')"
+									@click.stop="toggleGroup(row)">
+									<ChevronRight :size="18" />
+								</button>
+								<TbAvatar v-if="row.person" :person="row.person" :size="20" />
+								<span v-else class="tb-timeline__dot" :style="{ backgroundColor: row.color }" />
+								<span class="tb-timeline__group-title" :title="row.label">{{ row.label }}</span>
+								<span class="tb-timeline__group-count">{{ row.count }}</span>
 							</div>
-							<!-- Follow-up: a reminder on its own day, independent of the bar -->
-							<span v-if="row.followUp && followUpLeft(row) !== null"
-								class="tb-timeline__followup"
-								:class="{ 'tb-timeline__followup--due': row.followUpDue }"
-								:style="{ left: followUpLeft(row) + 'px' }"
-								:title="followUpTitle(row)"
-								@pointerdown.stop
-								@click="openTask(row.task)">
-								<BellAlertOutline v-if="row.followUpDue" :size="14" />
-								<BellOutline v-else :size="14" />
-							</span>
+							<div class="tb-timeline__lane" :style="{ width: timelineWidth + 'px' }">
+								<span v-if="row.span"
+									class="tb-timeline__group-span"
+									:style="groupSpanStyle(row)" />
+							</div>
 						</div>
-					</div>
+						<div v-else
+							class="tb-timeline__row"
+							:class="{ 'tb-timeline__row--active': row.task.uri === $route.params.taskId, 'tb-timeline__row--root': row.depth === 0 }"
+							:data-task-key="row.task.key">
+							<div class="tb-timeline__label" :style="{ paddingInlineStart: (8 + row.depth * 18) + 'px' }">
+								<button v-if="row.hasChildren"
+									type="button"
+									class="tb-timeline__expand no-nav"
+									:class="{ 'tb-timeline__expand--open': row.expanded }"
+									:disabled="filtering"
+									:aria-expanded="row.expanded ? 'true' : 'false'"
+									:aria-label="row.expanded ? tbt('Hide subtasks') : tbt('Show subtasks')"
+									:title="row.expanded ? tbt('Hide subtasks') : tbt('Show subtasks')"
+									@click.stop="toggleRow(row.task)">
+									<ChevronRight :size="18" />
+								</button>
+								<span v-else class="tb-timeline__expand-space" />
+								<span class="tb-timeline__dot" :style="{ backgroundColor: row.color }" />
+								<span class="tb-timeline__title"
+									:class="{ 'tb-timeline__title--closed': row.task.closed }"
+									:title="row.task.summary"
+									@click="openTask(row.task)">
+									{{ row.task.summary }}
+								</span>
+								<TimerSandEmpty v-if="row.waiting"
+									:size="14"
+									class="tb-timeline__waiting-icon"
+									:title="tbt('Waiting')" />
+								<span v-for="column in columns"
+									:key="column.key"
+									class="tb-timeline__cell"
+									:class="['tb-timeline__cell--' + column.key, { 'tb-timeline__cell--overdue': column.key === 'due' && isOverdue(row.task) }]"
+									:style="{ width: column.width + 'px' }">
+									<template v-if="column.key === 'start'">{{ shortDate(row.task.startMoment) }}</template>
+									<template v-else-if="column.key === 'due'">{{ shortDate(row.task.dueMoment) }}</template>
+									<template v-else-if="column.key === 'status'">
+										<span class="tb-timeline__status-dot" :style="{ backgroundColor: statusColor(row.task) }" />
+										{{ statusLabel(row.task) }}
+									</template>
+									<template v-else-if="column.key === 'progress' && row.task.complete > 0">{{ row.task.complete }} %</template>
+									<TbAvatar v-else-if="column.key === 'assignee' && row.assignee" :person="row.assignee" :size="20" />
+								</span>
+							</div>
+							<div class="tb-timeline__lane"
+								:class="{ 'tb-timeline__lane--drawable': row.drawable }"
+								:style="{ width: timelineWidth + 'px' }"
+								:title="row.drawable ? tbt('Drag to set the dates') : null"
+								@pointerdown="row.drawable && startDraw(row, $event)">
+								<span v-if="draw && draw.key === row.task.key"
+									class="tb-timeline__bar tb-timeline__bar--preview"
+									:style="drawStyle" />
+								<div v-if="row.span"
+									class="tb-timeline__bar"
+									:class="{
+										'tb-timeline__bar--milestone': row.span.milestone,
+										'tb-timeline__bar--derived': row.span.derived,
+										'tb-timeline__bar--outside': row.outside,
+										'tb-timeline__bar--cut-start': cut(row).cutStart,
+										'tb-timeline__bar--cut-end': cut(row).cutEnd,
+										'tb-timeline__bar--closed': row.task.closed,
+										'tb-timeline__bar--waiting': row.waiting,
+										'tb-timeline__bar--editable': row.editable,
+										'tb-timeline__bar--dragged': drag && drag.keys.has(row.task.key),
+									}"
+									:style="barStyle(row)"
+									:title="barTitle(row)"
+									@pointerdown="startDrag(row, 'move', $event)">
+									<template v-if="!row.span.milestone">
+										<span class="tb-timeline__fill" :style="{ width: row.task.complete + '%' }" />
+										<span v-if="row.editable && !row.span.derived"
+											class="tb-timeline__handle tb-timeline__handle--start"
+											@pointerdown.stop="startDrag(row, 'start', $event)" />
+										<span v-if="row.editable && !row.span.derived"
+											class="tb-timeline__handle tb-timeline__handle--end"
+											@pointerdown.stop="startDrag(row, 'end', $event)" />
+									</template>
+									<AlertCircleOutline v-if="row.outside" :size="14" class="tb-timeline__warn" />
+								</div>
+								<!-- Follow-up: a reminder on its own day, independent of the bar -->
+								<span v-if="row.followUp && followUpLeft(row) !== null"
+									class="tb-timeline__followup"
+									:class="{ 'tb-timeline__followup--due': row.followUpDue, 'tb-timeline__followup--editable': row.followUpEditable, 'tb-timeline__followup--dragged': bell && bell.key === row.task.key }"
+									:style="{ left: followUpLeft(row) + 'px' }"
+									:title="followUpTitle(row)"
+									@pointerdown.stop="startBellDrag(row, $event)">
+									<BellAlertOutline v-if="row.followUpDue" :size="14" />
+									<BellOutline v-else :size="14" />
+								</span>
+							</div>
+						</div>
+					</template>
 				</div>
 			</div>
 		</div>
@@ -169,12 +226,13 @@ On phones the timeline is only shown, not changed.
 <script>
 import { assigneeOf } from '../assignee.js'
 import { boardColumn, collectBoardTasks, isFiltering } from '../board.js'
+import { shortDate } from '../dates.js'
 import { tableSubtaskFilter } from '../fold.js'
 import { tbt } from '../l10n.js'
 import { isTaskReadOnly } from '../store/board.js'
 import { STATUS } from '../status.js'
 import { treeRows } from '../table.js'
-import { barGeometry, DEFAULT_SCALE, dragDays, headerCells, outsideParent, rowSpan, SCALES, visibleRange } from '../timeline.js'
+import { barGeometry, dayAt, DEFAULT_SCALE, dragDays, drawnDates, groupTimelineTasks, headerCells, joinSpans, outsideParent, rowSpan, SCALES, timelineColumns, visibleRange } from '../timeline.js'
 import { followUpDate, followUpState } from '../waiting.js'
 import TbAvatar from './TbAvatar.vue'
 import { uidToHexColor } from '../../utils/color.js'
@@ -230,6 +288,10 @@ export default {
 			maxHeight: 'none',
 			now: moment(),
 			drag: null,
+			// Drawing the dates of a task without dates
+			draw: null,
+			// Moving a follow-up bell
+			bell: null,
 			// Phones: only show (no dragging)
 			touch: false,
 		}
@@ -257,8 +319,25 @@ export default {
 		hiddenProjects() {
 			return new Set(Array.isArray(this.view.timelineHidden) ? this.view.timelineHidden : [])
 		},
+		/**
+		 * Columns next to the task name (none on phones)
+		 *
+		 * @return {Array}
+		 */
+		columns() {
+			return this.touch ? [] : timelineColumns(this.view.timelineColumns)
+		},
+		/**
+		 * Grouping of the main tasks; by list only in collections
+		 *
+		 * @return {string} 'none', 'calendar' or 'assignee'
+		 */
+		groupBy() {
+			const value = this.view.timelineGroup
+			return value === 'assignee' || (value === 'calendar' && this.collectionId) ? value : 'none'
+		},
 		leftWidth() {
-			return this.touch ? 150 : 300
+			return this.touch ? 150 : 240 + this.columns.reduce((sum, column) => sum + column.width, 0)
 		},
 		filtering() {
 			return isFiltering(this.searchQuery, this.filter)
@@ -328,37 +407,54 @@ export default {
 				}
 				return a.summary.localeCompare(b.summary)
 			})
-			const roots = this.roots.filter(task => !this.hiddenProjects.has(task.key))
-			const tree = treeRows(order(roots), {
+			const roots = order(this.roots.filter(task => !this.hiddenProjects.has(task.key)))
+			const tree = tasks => treeRows(tasks, {
 				isExpanded: task => !this.$store.getters.isTbTimelineCollapsed(task.key),
 				include,
 				order,
 				matches: this.filtering ? task => task.matches(this.searchQuery, this.filter) : null,
 			})
 			const rows = []
-			const parents = []
-			for (const entry of tree) {
-				parents.length = entry.depth
-				const span = spanOf(entry.task)
-				const parent = parents[entry.depth - 1] || null
-				parents[entry.depth] = { span }
-				const followUp = this.followUpOf(entry.task)
-				if (!span && !followUp && !this.showUndated) {
-					continue
+			if (this.groupBy === 'none') {
+				this.pushRows(rows, tree(roots), spanOf)
+				return rows
+			}
+			for (const group of groupTimelineTasks(roots, this.groupBy, assigneeOf)) {
+				const key = 'group:' + group.key
+				const expanded = !this.$store.getters.isTbTimelineCollapsed(key)
+				const header = {
+					group: true,
+					key,
+					label: group.label ?? tbt('Nobody assigned'),
+					person: group.person,
+					color: group.calendar ? (group.calendar.color || 'var(--color-primary-element)') : 'var(--color-text-maxcontrast)',
+					count: group.tasks.length,
+					expanded,
+					span: joinSpans(group.tasks.map(spanOf)),
 				}
-				rows.push({
-					...entry,
-					span,
-					followUp,
-					followUpDue: !!followUp && !followUp.isAfter(this.now, 'day'),
-					waiting: !entry.task.closed && boardColumn(entry.task, this.now) === 'waiting',
-					outside: outsideParent(span, parent && parent.span),
-					assignee: assigneeOf(entry.task),
-					color: this.colorOf(entry.task),
-					editable: this.canEdit(entry.task, span),
-				})
+				rows.push(header)
+				if (expanded) {
+					this.pushRows(rows, tree(group.tasks), spanOf)
+				}
 			}
 			return rows
+		},
+		/**
+		 * Rows that are tasks (not group headers)
+		 *
+		 * @return {Array}
+		 */
+		taskRows() {
+			return this.rows.filter(row => !row.group)
+		},
+		drawStyle() {
+			if (!this.draw) {
+				return {}
+			}
+			const first = moment.min(this.draw.from, this.draw.to)
+			const last = moment.max(this.draw.from, this.draw.to)
+			const left = first.diff(this.range.start, 'days') * this.dayWidth
+			return { left: left + 'px', width: (last.diff(first, 'days') + 1) * this.dayWidth + 'px', '--tb-bar': this.draw.color }
 		},
 		range() {
 			const followUps = this.rows.filter(row => row.followUp).map(row => ({ start: row.followUp, end: row.followUp }))
@@ -381,7 +477,7 @@ export default {
 		},
 		legend() {
 			const entries = new Map()
-			for (const row of this.rows) {
+			for (const row of this.taskRows) {
 				const task = row.task
 				let key
 				let label
@@ -483,14 +579,83 @@ export default {
 			if (day < 0 || day >= this.range.days) {
 				return null
 			}
-			return day * this.dayWidth + this.dayWidth / 2
+			const moved = this.bell && this.bell.key === row.task.key ? this.bellDays(this.bell) : 0
+			return (day + moved) * this.dayWidth + this.dayWidth / 2
+		},
+		/**
+		 * @param {object} bell The bell being moved
+		 * @return {number} Days moved, not before today
+		 */
+		bellDays(bell) {
+			const earliest = this.now.clone().startOf('day').diff(bell.followUp, 'days')
+			return Math.max(dragDays(bell.dx, this.dayWidth), earliest)
+		},
+		shortDate(value) {
+			return shortDate(value)
+		},
+		isOverdue(task) {
+			return !task.closed && task.dueMoment.isValid() && task.dueMoment.isBefore(this.now, 'day')
+		},
+		statusLabel(task) {
+			return tbt(STATUS[boardColumn(task, this.now)].label)
+		},
+		statusColor(task) {
+			return STATUS_COLORS[boardColumn(task, this.now)]
+		},
+		groupSpanStyle(row) {
+			const { left, width } = barGeometry(row.span, this.range.start, this.dayWidth, this.range.days)
+			return { left: left + 'px', width: width + 'px', backgroundColor: row.color }
+		},
+		toggleGroup(row) {
+			this.$store.commit('setTbTimelineCollapsed', { keys: [row.key] })
 		},
 		followUpTitle(row) {
 			const date = row.followUp.format('L')
 			return row.task.summary + ' · ' + (row.followUpDue ? tbt('Follow-up reached {date}', { date }) : tbt('Follow-up on {date}', { date }))
 		},
+		/**
+		 * @param {object} task The task
+		 * @return {boolean} Whether its dates can be changed here (not on phones)
+		 */
+		canChange(task) {
+			return !this.touch && !isTaskReadOnly(task) && !task.isRecurring
+		},
 		canEdit(task, span) {
-			return !this.touch && !!span && !isTaskReadOnly(task) && !task.isRecurring
+			return !!span && this.canChange(task)
+		},
+		/**
+		 * Adds the rows of a tree of tasks; tasks without dates only if they are shown
+		 *
+		 * @param {Array} rows The rows so far
+		 * @param {Array} tree Entries from treeRows
+		 * @param {Function} spanOf task => span
+		 */
+		pushRows(rows, tree, spanOf) {
+			const parents = []
+			for (const entry of tree) {
+				parents.length = entry.depth
+				const span = spanOf(entry.task)
+				const parent = parents[entry.depth - 1] || null
+				parents[entry.depth] = { span }
+				const followUp = this.followUpOf(entry.task)
+				if (!span && !followUp && !this.showUndated) {
+					continue
+				}
+				rows.push({
+					...entry,
+					key: entry.task.key,
+					span,
+					followUp,
+					followUpDue: !!followUp && !followUp.isAfter(this.now, 'day'),
+					followUpEditable: !!followUp && !this.touch && !isTaskReadOnly(entry.task),
+					waiting: !entry.task.closed && boardColumn(entry.task, this.now) === 'waiting',
+					outside: outsideParent(span, parent && parent.span),
+					assignee: assigneeOf(entry.task),
+					color: this.colorOf(entry.task),
+					editable: this.canEdit(entry.task, span),
+					drawable: !span && this.canChange(entry.task),
+				})
+			}
 		},
 		barStyle(row) {
 			const geometry = barGeometry(row.span, this.range.start, this.dayWidth, this.range.days)
@@ -586,6 +751,98 @@ export default {
 			window.addEventListener('pointerup', this.onDragEnd, { once: true })
 			window.addEventListener('keydown', this.onDragKey)
 		},
+		/**
+		 * Starts drawing the dates of a task without dates on its row
+		 *
+		 * @param {object} row The row
+		 * @param {PointerEvent} event The event
+		 */
+		startDraw(row, event) {
+			if (event.button !== 0) {
+				return
+			}
+			event.preventDefault()
+			const laneLeft = event.currentTarget.getBoundingClientRect().left
+			const day = dayAt(event.clientX - laneLeft, this.range.start, this.dayWidth, this.range.days)
+			this.draw = { key: row.task.key, task: row.task, color: row.color, laneLeft, startX: event.clientX, from: day, to: day, moved: false }
+			window.addEventListener('pointermove', this.onDrawMove)
+			window.addEventListener('pointerup', this.onDrawEnd, { once: true })
+			window.addEventListener('keydown', this.onDragKey)
+		},
+		onDrawMove(event) {
+			if (!this.draw) {
+				return
+			}
+			if (Math.abs(event.clientX - this.draw.startX) > 3) {
+				this.draw.moved = true
+			}
+			this.draw.to = dayAt(event.clientX - this.draw.laneLeft, this.range.start, this.dayWidth, this.range.days)
+		},
+		async onDrawEnd() {
+			const draw = this.draw
+			this.stopDrag()
+			// A click without moving does nothing (no dates by accident)
+			if (!draw || !draw.moved) {
+				return
+			}
+			try {
+				await this.$store.dispatch('tbSetDates', { task: draw.task, ...drawnDates(draw.from, draw.to) })
+			} catch (error) {
+				console.error(error)
+				showError(tbt('The dates could not be changed.'))
+			}
+		},
+		/**
+		 * Starts moving the follow-up bell; a click opens the task
+		 *
+		 * @param {object} row The row
+		 * @param {PointerEvent} event The event
+		 */
+		startBellDrag(row, event) {
+			if (event.button !== 0) {
+				return
+			}
+			if (!row.followUpEditable) {
+				this.pendingOpen = row.task
+				window.addEventListener('pointerup', this.openPending, { once: true })
+				return
+			}
+			event.preventDefault()
+			this.bell = { key: row.task.key, task: row.task, followUp: row.followUp, startX: event.clientX, dx: 0, moved: false }
+			window.addEventListener('pointermove', this.onBellMove)
+			window.addEventListener('pointerup', this.onBellEnd, { once: true })
+			window.addEventListener('keydown', this.onDragKey)
+		},
+		onBellMove(event) {
+			if (!this.bell) {
+				return
+			}
+			this.bell.dx = event.clientX - this.bell.startX
+			if (Math.abs(this.bell.dx) > 3) {
+				this.bell.moved = true
+			}
+		},
+		async onBellEnd() {
+			const bell = this.bell
+			this.stopDrag()
+			if (!bell) {
+				return
+			}
+			if (!bell.moved) {
+				this.openTask(bell.task)
+				return
+			}
+			const days = this.bellDays(bell)
+			if (!days) {
+				return
+			}
+			try {
+				await this.$store.dispatch('tbSetFollowUpDate', { task: bell.task, date: bell.followUp.clone().add(days, 'days') })
+			} catch (error) {
+				console.error(error)
+				showError(tbt('Could not change the follow-up.'))
+			}
+		},
 		openPending() {
 			if (this.pendingOpen) {
 				this.openTask(this.pendingOpen)
@@ -610,8 +867,14 @@ export default {
 		stopDrag() {
 			window.removeEventListener('pointermove', this.onDragMove)
 			window.removeEventListener('pointerup', this.onDragEnd)
+			window.removeEventListener('pointermove', this.onDrawMove)
+			window.removeEventListener('pointerup', this.onDrawEnd)
+			window.removeEventListener('pointermove', this.onBellMove)
+			window.removeEventListener('pointerup', this.onBellEnd)
 			window.removeEventListener('keydown', this.onDragKey)
 			this.drag = null
+			this.draw = null
+			this.bell = null
 		},
 		async onDragEnd() {
 			const drag = this.drag
@@ -681,8 +944,8 @@ export default {
 		left: 0;
 		z-index: 4;
 		display: flex;
-		align-items: center;
-		justify-content: space-between;
+		flex-direction: column;
+		justify-content: center;
 		flex: 0 0 var(--tb-left);
 		width: var(--tb-left);
 		padding: 0 8px 0 12px;
@@ -690,6 +953,21 @@ export default {
 		background-color: inherit;
 		font-weight: 600;
 		color: var(--color-text-maxcontrast);
+	}
+
+	&__corner-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		height: 26px;
+	}
+
+	&__corner-columns {
+		display: flex;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 6px;
+		height: 26px;
 	}
 
 	&__scale {
@@ -852,16 +1130,82 @@ export default {
 		}
 	}
 
-	&__percent {
+	// Columns next to the task name
+	&__cell {
+		display: inline-flex;
 		flex: 0 0 auto;
+		align-items: center;
+		justify-content: flex-end;
+		gap: 4px;
+		overflow: hidden;
+		white-space: nowrap;
 		font-size: 12px;
 		font-weight: normal;
 		color: var(--color-text-maxcontrast);
+
+		&--status {
+			justify-content: flex-start;
+		}
+
+		&--overdue {
+			color: var(--tb-viz-overdue);
+		}
+
+		&--head {
+			font-size: 11px;
+			font-weight: 600;
+		}
+	}
+
+	&__status-dot {
+		flex: 0 0 auto;
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+	}
+
+	// Group of rows (list or person)
+	&__group {
+		display: flex;
+		height: var(--tb-row-h);
+		border-bottom: 1px solid var(--color-border);
+		background-color: color-mix(in srgb, var(--color-background-dark) 45%, transparent);
+		font-weight: 700;
+
+		.tb-timeline__label {
+			padding-inline-start: 8px;
+			background-color: color-mix(in srgb, var(--color-background-dark) 45%, var(--tb-card-bg, var(--color-main-background)));
+		}
+	}
+
+	&__group-title {
+		flex: 1 1 auto;
+		min-width: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	&__group-count {
+		flex: 0 0 auto;
+		padding: 0 8px;
+		border-radius: 999px;
+		background-color: var(--color-background-dark);
+		font-size: 12px;
+		font-weight: normal;
+	}
+
+	&__group-span {
+		position: absolute;
+		top: 50%;
+		height: 6px;
+		margin-top: -3px;
+		border-radius: 3px;
+		opacity: .55;
 	}
 
 	// Phones: the title gets the narrow column
 	@media only screen and (max-width: 600px) {
-		&__percent,
 		&__corner-label,
 		&__label :deep(.tb-avatar) {
 			display: none;
@@ -871,6 +1215,11 @@ export default {
 	&__lane {
 		position: relative;
 		flex: 0 0 auto;
+
+		// A task without dates: draw them
+		&--drawable {
+			cursor: crosshair;
+		}
 	}
 
 	&__bar {
@@ -890,6 +1239,13 @@ export default {
 		&--dragged {
 			opacity: .85;
 			box-shadow: 0 2px 8px rgba(0, 0, 0, .2);
+		}
+
+		// While dates are drawn
+		&--preview {
+			border-style: dashed;
+			opacity: .8;
+			pointer-events: none;
 		}
 
 		&--derived {
@@ -990,6 +1346,14 @@ export default {
 		&--due {
 			border-color: var(--tb-viz-overdue);
 			color: var(--tb-viz-overdue);
+		}
+
+		&--editable {
+			cursor: ew-resize;
+		}
+
+		&--dragged {
+			box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
 		}
 
 		&--legend {

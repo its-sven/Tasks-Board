@@ -1,3 +1,15 @@
+## 1.5.0 - 2026-11-13
+
+### Added
+- Hide lists: "Hide list" in the menu of a list, for example for calendars that can hold tasks but are only used for appointments. Hidden lists are folded at the bottom of the navigation ("Hidden lists"), where they can be opened and shown again. Their tasks are left out of the collections, the overview, the Nextcloud dashboard widget and the list choices; the list itself still shows them. The setting is per person, the lists themselves do not change
+- Timeline: columns next to the task name for start, due, status, progress and person, chosen in the timeline options (progress and person as before)
+- Timeline: rows grouped by list (in collections) or by person; a group can be folded and shows the span of its tasks
+- Timeline: drag across the days on the row of a task without dates to set its start and due date (one day sets the due date only)
+- Timeline: drag the bell to move the follow-up date (not before today); start and due date stay
+
+### Changed
+- Translations from Nextcloud Tasks
+
 ## 1.4.0 - 2026-11-03
 
 ### Added

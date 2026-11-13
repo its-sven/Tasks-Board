@@ -78,6 +78,25 @@ in the header (TbClosedToggle, TbExpandToggle).
 			{{ option.label }}
 		</NcActionRadio>
 		<NcActionSeparator />
+		<NcActionCaption :name="tbt('Group by')" />
+		<NcActionRadio v-for="option in groupOptions"
+			:key="option.value"
+			name="tb-timeline-group"
+			:value="option.value"
+			:disabled="option.disabled"
+			:model-value="timelineGroup"
+			@update:model-value="setView({ timelineGroup: option.value })">
+			{{ option.label }}
+		</NcActionRadio>
+		<NcActionSeparator />
+		<NcActionCaption :name="tbt('Columns')" />
+		<NcActionCheckbox v-for="column in timelineColumnOptions"
+			:key="column.key"
+			:model-value="shownTimelineColumns.includes(column.key)"
+			@update:model-value="setTimelineColumn(column.key, $event)">
+			{{ tbt(column.label) }}
+		</NcActionCheckbox>
+		<NcActionSeparator />
 		<NcActionCheckbox :model-value="!!view.timelineUndated"
 			@update:model-value="setView({ timelineUndated: $event })">
 			{{ tbt('Show tasks without dates') }}
@@ -164,6 +183,7 @@ in the header (TbClosedToggle, TbExpandToggle).
 import { collectBoardTasks, effectiveLanes, viewKeyForRoute } from '../board.js'
 import { tbt } from '../l10n.js'
 import { normalizeColumns, setColumnVisible, storableColumns } from '../table.js'
+import { DEFAULT_TIMELINE_COLUMNS, TIMELINE_COLUMNS } from '../timeline.js'
 
 import NcActionButton from '@nextcloud/vue/components/NcActionButton'
 import NcActionCaption from '@nextcloud/vue/components/NcActionCaption'
@@ -216,6 +236,23 @@ export default {
 				{ value: 'assignee', label: tbt('Person') },
 				{ value: 'status', label: tbt('Status') },
 			]
+		},
+		groupOptions() {
+			return [
+				{ value: 'none', label: tbt('None') },
+				{ value: 'calendar', label: tbt('List'), disabled: !this.isCollection },
+				{ value: 'assignee', label: tbt('Person') },
+			]
+		},
+		timelineGroup() {
+			const value = this.view.timelineGroup || 'none'
+			return value === 'calendar' && !this.isCollection ? 'none' : value
+		},
+		timelineColumnOptions() {
+			return TIMELINE_COLUMNS
+		},
+		shownTimelineColumns() {
+			return Array.isArray(this.view.timelineColumns) ? this.view.timelineColumns : DEFAULT_TIMELINE_COLUMNS
 		},
 		hiddenProjects() {
 			return Array.isArray(this.view.timelineHidden) ? this.view.timelineHidden : []
@@ -275,6 +312,13 @@ export default {
 		},
 		resetColumns() {
 			this.$store.dispatch('setTbPrefs', { tableColumns: null })
+		},
+		setTimelineColumn(key, shown) {
+			const keys = this.shownTimelineColumns.filter(other => other !== key)
+			if (shown) {
+				keys.push(key)
+			}
+			this.setView({ timelineColumns: keys })
 		},
 		setProjectShown(key, shown) {
 			const hidden = this.hiddenProjects.filter(other => other !== key)

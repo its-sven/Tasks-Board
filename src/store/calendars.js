@@ -39,6 +39,8 @@ import { isParentInList, searchSubTasks } from './storeHelper.js'
 import { findVTODObyState } from './cdav-requests.js'
 import { detectColor, uidToHexColor } from '../utils/color.js'
 import { mapCDavObjectToCalendarObject } from '../models/calendarObject.js'
+// Tasks Board: lists the person has hidden
+import { isListHidden } from '../tb/hidden.js'
 
 const calendarModel = {
 	id: '',
@@ -200,7 +202,30 @@ const getters = {
 	 * @return {Array<Calendar>} Array of the calendars sorted alphabetically
 	 */
 	getSortedWritableCalendars: (state, getters) => {
-		return getters.getSortedCalendars.filter(c => !c.readOnly)
+		// Tasks Board: hidden lists are not offered
+		return getters.getSortedCalendars.filter(c => !c.readOnly && !isListHidden(c))
+	},
+
+	/**
+	 * Tasks Board: the lists shown in the navigation (without the hidden ones)
+	 *
+	 * @param {object} state The store data
+	 * @param {object} getters The store getters
+	 * @return {Array<Calendar>}
+	 */
+	tbShownCalendars: (state, getters) => {
+		return getters.getSortedCalendars.filter(c => !isListHidden(c))
+	},
+
+	/**
+	 * Tasks Board: the hidden lists
+	 *
+	 * @param {object} state The store data
+	 * @param {object} getters The store getters
+	 * @return {Array<Calendar>}
+	 */
+	tbHiddenCalendars: (state, getters) => {
+		return getters.getSortedCalendars.filter(c => isListHidden(c))
 	},
 
 	/**
@@ -323,8 +348,10 @@ const getters = {
 	getDefaultCalendar: (state, getters, rootState) => {
 		const defaultCalendar = getters.getCalendarById(rootState.settings.settings.defaultCalendarId)
 		// If the default calendar is read only we return the first calendar that is writable
-		if (!defaultCalendar || defaultCalendar.readOnly) {
-			return getters.getSortedCalendars.find(calendar => !calendar.readOnly) || getters.getSortedCalendars[0]
+		// Tasks Board: or hidden
+		if (!defaultCalendar || defaultCalendar.readOnly || isListHidden(defaultCalendar)) {
+			return getters.getSortedCalendars.find(calendar => !calendar.readOnly && !isListHidden(calendar))
+				|| getters.getSortedCalendars.find(calendar => !calendar.readOnly) || getters.getSortedCalendars[0]
 		}
 		return defaultCalendar
 	},

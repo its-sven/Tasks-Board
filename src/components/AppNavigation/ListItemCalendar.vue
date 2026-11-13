@@ -89,6 +89,16 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 				</template>
 				{{ tbt('Import tasks…') }}
 			</NcActionButton>
+			<!-- Tasks Board: hide the list (or show it again) -->
+			<NcActionButton class="tb-hide-list"
+				:close-after-click="true"
+				@click="tbToggleHidden">
+				<template #icon>
+					<EyeOutline v-if="tbHidden" :size="20" />
+					<EyeOffOutline v-else :size="20" />
+				</template>
+				{{ tbHidden ? tbt('Show list') : tbt('Hide list') }}
+			</NcActionButton>
 			<NcActionButton v-if="!calendar.readOnly || calendar.isSharedWithMe"
 				:title="deleteMessage"
 				@click="scheduleDelete">
@@ -136,6 +146,7 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 <script>
 import Colorpicker from './Colorpicker.vue'
 import ShareCalendar from './CalendarShare.vue'
+import { isListHidden } from '../../tb/hidden.js'
 import { pickAndImport } from '../../tb/import.js'
 import { tbt } from '../../tb/l10n.js'
 
@@ -154,6 +165,8 @@ import NcTextField from '@nextcloud/vue/components/NcTextField'
 import Close from 'vue-material-design-icons/Close.vue'
 import Delete from 'vue-material-design-icons/TrashCanOutline.vue'
 import Download from 'vue-material-design-icons/TrayArrowDown.vue'
+import EyeOffOutline from 'vue-material-design-icons/EyeOffOutline.vue'
+import EyeOutline from 'vue-material-design-icons/EyeOutline.vue'
 import LinkVariant from 'vue-material-design-icons/Link.vue'
 import Pencil from 'vue-material-design-icons/PencilOutline.vue'
 import ShareVariant from 'vue-material-design-icons/ShareVariantOutline.vue'
@@ -180,6 +193,8 @@ export default {
 		Close,
 		Delete,
 		Download,
+		EyeOffOutline,
+		EyeOutline,
 		LinkVariant,
 		Pencil,
 		ShareVariant,
@@ -212,6 +227,14 @@ export default {
 		}
 	},
 	computed: {
+		/**
+		 * Tasks Board: whether the person has hidden this list
+		 *
+		 * @return {boolean}
+		 */
+		tbHidden() {
+			return isListHidden(this.calendar)
+		},
 		...mapGetters({
 			getCalendarCount: 'getCalendarCount',
 			isCalendarNameUsed: 'isCalendarNameUsed',
@@ -299,6 +322,17 @@ export default {
 		 */
 		tbImport() {
 			pickAndImport(this.$store, this.calendar, { showSuccess, showError, tbt })
+		},
+		/**
+		 * Tasks Board: hides the list or shows it again
+		 */
+		async tbToggleHidden() {
+			try {
+				await this.$store.dispatch('setTbListHidden', { calendar: this.calendar, hide: !this.tbHidden })
+			} catch (error) {
+				console.error(error)
+				showError(tbt('Could not save the setting.'))
+			}
 		},
 
 		...mapActions([

@@ -3,7 +3,10 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import { barGeometry, dragDays, headerCells, joinSpans, outsideParent, rowSpan, shiftedDates, taskSpan, visibleRange } from '../../../../src/tb/timeline.js'
+import { barGeometry, dayAt, DEFAULT_TIMELINE_COLUMNS, dragDays, drawnDates, groupTimelineTasks, headerCells, joinSpans, outsideParent, rowSpan, shiftedDates, taskSpan, timelineColumns, visibleRange } from '../../../../src/tb/timeline.js'
+import tbBoard from '../../../../src/tb/store/board.js'
+import tasksModule from '../../../../src/store/tasks.js'
+import { followUpDate, hasFollowUpAlarm } from '../../../../src/tb/waiting.js'
 
 import moment from '@nextcloud/moment'
 
@@ -107,5 +110,72 @@ describe('timeline - dragging', () => {
 		// a milestone gets a start when its start is dragged
 		expect(shiftedDates(dueOnly, -3, 'start').start.format('YYYY-MM-DD')).toBe('2026-11-09')
 		expect(shiftedDates(dueOnly, 1, 'move').start).toBeNull()
+	})
+})
+
+describe('timeline - columns, drawing, groups', () => {
+	it('shows the chosen columns in a fixed order, progress and person without a setting', () => {
+		expect(timelineColumns(undefined).map(column => column.key)).toEqual([...DEFAULT_TIMELINE_COLUMNS])
+		expect(timelineColumns(['assignee', 'due', 'start', 'gone']).map(column => column.key)).toEqual(['start', 'due', 'assignee'])
+		expect(timelineColumns([])).toEqual([])
+	})
+
+	it('finds the day under the pointer and turns a drawn span into dates', () => {
+		const start = moment('2026-11-02')
+		expect(dayAt(0, start, 18, 40).format('YYYY-MM-DD')).toBe('2026-11-02')
+		expect(dayAt(18 * 3 + 5, start, 18, 40).format('YYYY-MM-DD')).toBe('2026-11-05')
+		expect(dayAt(-50, start, 18, 40).format('YYYY-MM-DD')).toBe('2026-11-02')
+		expect(dayAt(99999, start, 18, 40).format('YYYY-MM-DD')).toBe('2026-12-11')
+		const one = drawnDates(moment('2026-11-10'), moment('2026-11-10'))
+		expect(one.start).toBeNull()
+		expect(one.due.format('YYYY-MM-DD')).toBe('2026-11-10')
+		const back = drawnDates(moment('2026-11-20'), moment('2026-11-12'))
+		expect([back.start.format('YYYY-MM-DD'), back.due.format('YYYY-MM-DD')]).toEqual(['2026-11-12', '2026-11-20'])
+	})
+
+	it('groups main tasks by list (navigation order) or by person (nobody last)', () => {
+		const a = { ...makeCalendar('a', { displayName: 'Zentrale' }), order: 0 }
+		const b = { ...makeCalendar('b', { displayName: 'Außenstelle' }), order: 1 }
+		const t1 = makeTask(b, { uid: 't1' })
+		const t2 = makeTask(a, { uid: 't2' })
+		const t3 = makeTask(b, { uid: 't3' })
+		const byList = groupTimelineTasks([t1, t2, t3], 'calendar', () => null)
+		expect(byList.map(group => [group.label, group.tasks.map(task => task.uid)])).toEqual([['Zentrale', ['t2']], ['Außenstelle', ['t1', 't3']]])
+		const people = { t1: { uid: 'max', displayName: 'Max' }, t3: { uid: 'anna', displayName: 'Anna' } }
+		const byPerson = groupTimelineTasks([t1, t2, t3], 'assignee', task => people[task.uid] || null)
+		expect(byPerson.map(group => [group.label, group.tasks.map(task => task.uid)])).toEqual([['Anna', ['t3']], ['Max', ['t1']], [null, ['t2']]])
+	})
+})
+
+describe('timeline - store actions', () => {
+	const context = () => {
+		const dispatched = []
+		return {
+			dispatched,
+			commit: (name, payload) => (tasksModule.mutations[name] || tbBoard.mutations[name])({}, payload),
+			dispatch: async (name) => { dispatched.push(name) },
+		}
+	}
+
+	it('gives a task without dates the drawn dates', async () => {
+		const task = makeTask(makeCalendar('sd'), { uid: 'sd1' })
+		const ctx = context()
+		await tbBoard.actions.tbSetDates(ctx, { task, ...drawnDates(moment('2026-11-12'), moment('2026-11-20')) })
+		expect(task.startMoment.format('YYYY-MM-DD')).toBe('2026-11-12')
+		expect(task.dueMoment.format('YYYY-MM-DD')).toBe('2026-11-20')
+		expect(task.allDay).toBe(true)
+		expect(ctx.dispatched).toEqual(['updateTask'])
+		const read = makeTask(makeCalendar('ro', { readOnly: true }), { uid: 'ro1' })
+		await tbBoard.actions.tbSetDates(context(), { task: read, start: null, due: moment('2026-11-12') })
+		expect(read.dueMoment.isValid()).toBe(false)
+	})
+
+	it('moves the follow-up, start and due stay', async () => {
+		const task = makeTask(makeCalendar('fu'), { uid: 'fu1', tags: ['waiting'], start: moment('2026-11-01'), due: moment('2026-11-30'), followUp: moment('2026-11-10') })
+		await tbBoard.actions.tbSetFollowUpDate(context(), { task, date: moment('2026-11-14') })
+		expect(followUpDate(task).format('YYYY-MM-DD')).toBe('2026-11-14')
+		expect(hasFollowUpAlarm(task)).toBe(true)
+		expect(task.startMoment.format('YYYY-MM-DD')).toBe('2026-11-01')
+		expect(task.dueMoment.format('YYYY-MM-DD')).toBe('2026-11-30')
 	})
 })

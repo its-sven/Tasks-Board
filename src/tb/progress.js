@@ -32,6 +32,8 @@ export const DEFAULT_PREFS = Object.freeze({
 	listStyle: 'cards',
 	// Navigation: order of the dashboard and the collections (null = default)
 	collectionOrder: null,
+	// Lists the person has hidden (see hidden.js)
+	hiddenLists: [],
 })
 
 /**

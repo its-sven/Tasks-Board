@@ -226,3 +226,91 @@ export function shiftedDates(task, days, edge = 'move') {
 		due: due ? due.add(days, 'days') : null,
 	}
 }
+
+/**
+ * Columns that can be shown next to the task name (left side), with their width in pixels.
+ * `label` is translated in the component.
+ */
+export const TIMELINE_COLUMNS = Object.freeze([
+	{ key: 'start', label: 'Start', width: 64 },
+	{ key: 'due', label: 'Due', width: 64 },
+	{ key: 'status', label: 'Status', width: 96 },
+	{ key: 'progress', label: 'Progress', width: 48 },
+	{ key: 'assignee', label: 'Person', width: 48 },
+])
+
+/** Columns shown without a setting (as before they could be chosen) */
+export const DEFAULT_TIMELINE_COLUMNS = Object.freeze(['progress', 'assignee'])
+
+/**
+ * The columns to show, in their fixed order
+ *
+ * @param {Array|undefined} stored Keys from the view settings
+ * @return {Array} Column definitions
+ */
+export function timelineColumns(stored) {
+	const keys = Array.isArray(stored) ? stored : DEFAULT_TIMELINE_COLUMNS
+	return TIMELINE_COLUMNS.filter(column => keys.includes(column.key))
+}
+
+/**
+ * The day under a position on the timeline
+ *
+ * @param {number} x Pixels from the start of the days shown
+ * @param {moment} rangeStart The first day shown
+ * @param {number} dayWidth Pixels per day
+ * @param {number} days Number of days shown
+ * @return {moment} Start of that day
+ */
+export function dayAt(x, rangeStart, dayWidth, days) {
+	const index = Math.min(Math.max(Math.floor(x / dayWidth), 0), days - 1)
+	return rangeStart.clone().add(index, 'days').startOf('day')
+}
+
+/**
+ * Dates for a task without dates after a span was drawn on its row:
+ * one day gives a due date only (a point), more days start and due
+ *
+ * @param {moment} from The day where the drag started
+ * @param {moment} to The day where it ended
+ * @return {object} { start, due } (start null for a single day)
+ */
+export function drawnDates(from, to) {
+	const first = moment.min(from, to).clone()
+	const last = moment.max(from, to).clone()
+	return first.isSame(last, 'day') ? { start: null, due: last } : { start: first, due: last }
+}
+
+/**
+ * Groups the main tasks by list or by person
+ *
+ * @param {Array} tasks The main tasks (in their order)
+ * @param {string} by 'calendar' or 'assignee'
+ * @param {Function} assignee task => person ({ uid, displayName }) or null
+ * @return {Array} [{ key, label, calendar, person, tasks }]: lists in their navigation order,
+ *   persons by name, tasks without a person last (label null)
+ */
+export function groupTimelineTasks(tasks, by, assignee) {
+	const groups = new Map()
+	for (const task of tasks) {
+		let key
+		let entry
+		if (by === 'assignee') {
+			const person = assignee(task)
+			key = person ? 'person:' + person.uid : 'person:'
+			entry = { label: person ? (person.displayName || person.uid) : null, person, calendar: null }
+		} else {
+			key = 'list:' + task.calendar.id
+			entry = { label: task.calendar.displayName, calendar: task.calendar, person: null }
+		}
+		if (!groups.has(key)) {
+			groups.set(key, { key, ...entry, tasks: [] })
+		}
+		groups.get(key).tasks.push(task)
+	}
+	const result = [...groups.values()]
+	if (by === 'assignee') {
+		return result.sort((a, b) => (a.label === null) - (b.label === null) || (a.label || '').localeCompare(b.label || ''))
+	}
+	return result.sort((a, b) => (a.calendar.order ?? 0) - (b.calendar.order ?? 0) || a.label.localeCompare(b.label))
+}

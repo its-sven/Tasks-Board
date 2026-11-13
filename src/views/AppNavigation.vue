@@ -77,6 +77,8 @@ License along with this library. If not, see <http://www.gnu.org/licenses/>.
 						@click="setInitialRoute(`/calendars/${element.id}`)" />
 				</template>
 			</Sortable>
+			<!-- Tasks Board: hidden lists, folded -->
+			<TbHiddenLists />
 			<NcAppNavigationItem v-click-outside="() => {creating = false}"
 				:name="t('tasks', 'Add List…')"
 				:class="{'collection--edit': creating}"
@@ -128,6 +130,7 @@ import Colorpicker from '../components/AppNavigation/Colorpicker.vue'
 import AppNavigationSettings from '../components/AppNavigation/AppNavigationSettings.vue'
 import Trashbin from '../components/AppNavigation/Trashbin.vue'
 import TbGroupListDialog from '../tb/components/TbGroupListDialog.vue'
+import TbHiddenLists from '../tb/components/TbHiddenLists.vue'
 import TbNavResizer from '../tb/components/TbNavResizer.vue'
 import { tbt } from '../tb/l10n.js'
 import { moveEntry } from '../tb/navigation.js'
@@ -168,6 +171,7 @@ export default {
 		NcTextField,
 		AppNavigationSettings,
 		TbGroupListDialog,
+		TbHiddenLists,
 		TbNavResizer,
 		ViewDashboardOutline,
 		Sortable,
@@ -218,7 +222,8 @@ export default {
 			return { forceFallback: true, fallbackTolerance: 6, delay: 500, delayOnTouchOnly: true, touchStartThreshold: 3 }
 		},
 		...mapGetters({
-			calendars: 'getSortedCalendars',
+			// Tasks Board: without the hidden lists (they are in TbHiddenLists)
+			calendars: 'tbShownCalendars',
 			collectionCount: 'getCollectionCount',
 			calendarCount: 'getCalendarCount',
 			isCalendarNameUsed: 'isCalendarNameUsed',

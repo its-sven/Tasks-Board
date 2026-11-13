@@ -236,6 +236,7 @@ everything below them. A click on a task opens it in the sidebar.
 import { assigneeOf } from '../assignee.js'
 import { shortDate } from '../dates.js'
 import { followUpDate, isWaitingTagName, priorityGroup } from '../board.js'
+import { isListHidden } from '../hidden.js'
 import { tbt } from '../l10n.js'
 import {
 	attention,
@@ -318,7 +319,7 @@ export default {
 		},
 		calendarOptions() {
 			const templateId = this.$store.getters.tbTemplateCalendar?.id
-			return this.$store.getters.getSortedCalendars.filter(calendar => calendar.supportsTasks !== false && calendar.id !== templateId)
+			return this.$store.getters.getSortedCalendars.filter(calendar => calendar.supportsTasks !== false && calendar.id !== templateId && !isListHidden(calendar))
 		},
 		/** Plain objects for the selects (they only read own properties) */
 		calendarChoices() {

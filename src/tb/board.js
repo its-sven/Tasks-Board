@@ -9,6 +9,7 @@
 
 import { isTaskInList, isParentInList, searchSubTasks, sort } from '../store/storeHelper.js'
 import { assigneeOf, isAssignedTo } from './assignee.js'
+import { isListHidden } from './hidden.js'
 import { isTemplateCalendar } from './templates.js'
 
 import { getCurrentUser } from '@nextcloud/auth'
@@ -66,8 +67,8 @@ export function closedMoment(task) {
  * @return {boolean}
  */
 export function closedTaskInCollection(task, collectionId, now, me) {
-	// Like the open tasks: the template list stays out of the collections
-	if (isTemplateCalendar(task.calendar)) {
+	// Like the open tasks: the template list and hidden lists stay out of the collections
+	if (isTemplateCalendar(task.calendar) || isListHidden(task.calendar)) {
 		return false
 	}
 	const closed = closedMoment(task)

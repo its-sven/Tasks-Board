@@ -29,8 +29,8 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 **Views**
 
 * **Board** (Kanban) with the columns Open, In progress, Waiting and Done (and Cancelled). Drag cards between columns, sort them by hand, show rows per priority, list, main task, tag or person, open subtasks on the card.
-* **Table** with columns you can show, hide, move and sort (title, person, start, due, list, main task, status, priority, tags, progress, overview, created, last modified). Main tasks open like a tree with their subtasks below them. Status, priority, person and due date can be changed right in the cell.
-* **Timeline** with main tasks and their subtasks as bars from the start to the due date, in lists and collections. Drag a bar to move it (a main task takes its subtasks along) or its ends to change start or due; a task with one date is a point, a main task without dates spans its subtasks, a subtask outside its main task is marked. Scale week, month or quarter, colour by list, person or status, single projects and tasks without dates can be hidden. On phones it is only shown.
+* **Table** with columns you can show, hide, move and sort (title, person, start, due, follow-up, list, main task, status, priority, tags, progress, overview, created, last modified). Main tasks open like a tree with their subtasks below them. Status, priority, person and due date can be changed right in the cell.
+* **Timeline** with main tasks and their subtasks as bars from the start to the due date, in lists and collections. Drag a bar to move it (a main task takes its subtasks along) or its ends to change start or due; a task with one date is a point, a main task without dates spans its subtasks, a subtask outside its main task is marked. Draw the dates of a task without dates on its row, drag the bell to move a follow-up. Scale week, month or quarter, colour by list, person or status, rows grouped by list or person, columns for start, due, status, progress and person; single projects and tasks without dates can be hidden. On phones it is only shown.
 * **Dashboard** with the current state, the distribution per person, list, project, priority and tag, the history of the last 12 weeks and the tasks that need attention (overdue, follow-up due, next follow-ups, nobody assigned, important but untouched for two weeks). Filters for lists, project, persons and tags.
 * **List** as cards or compact rows, collapsible subtasks (one button in the header opens or closes all of them, also in the table), more sort orders (status, progress, person, list, main task), a separate order for subtasks and grouping by status, tag or priority.
 * **One button** in the header shows or hides completed and cancelled tasks (including subtasks) in all three views, in lists and collections.
@@ -41,6 +41,7 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 * **Lists for a group:** create a list and share it with a group in one step.
 * **Assign tasks** to one person who has access to the list (owner and everyone it is shared with, also via groups). Collection "Assigned to me", sorting, grouping, board rows and filter by person.
 * **Notifications** when a task is assigned to you, when a task you assigned is completed, when a follow-up date is reached and when a task is due today. Each kind can be switched off.
+* **Hide lists** you do not use for tasks, for example calendars that can hold tasks but only have appointments: they are folded at the bottom of the navigation and left out of the collections, the overview and the dashboard widget.
 * **Waiting and follow-up:** a task waits when it has the waiting tag (or, switchable, when it starts in the future). The follow-up date is a reminder in the task, so start and due date stay the plan and apps on the phone remind you as well. Collections "Waiting" and "Follow-up due", a dialog to pick the follow-up date, a column in the table, a bell on the timeline and a notification when it is reached.
 * **Fixed tag list** that is suggested to everyone first. Tags that are not in the list are marked.
 
@@ -58,7 +59,7 @@ Everything the Tasks app does (lists, subtasks, smart collections, start and due
 
 <table>
   <tr>
-    <td colspan="2"><img src="screenshots/timeline.png" alt="Timeline of all lists: main tasks and subtasks as bars over October and November, points for tasks with one date, a subtask marked outside its main task"><br><sub><b>Timeline</b> – projects and subtasks over time, drag to plan them</sub></td>
+    <td colspan="2"><img src="screenshots/timeline.png" alt="Timeline of all lists: main tasks and subtasks as bars over October and November with progress and person, points for tasks with one date, bells for follow-ups, a subtask marked outside its main task"><br><sub><b>Timeline</b> – projects and subtasks over time, drag to plan them</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="screenshots/table.png" alt="Table sorted by due date, two main tasks opened with their subtasks below"><br><sub><b>Table</b> – subtasks as a tree, sortable columns, quick changes in the cells</sub></td>
